@@ -214,6 +214,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 <script type="module">
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Detect mobile first — used throughout all sections
 const isMobile = navigator.maxTouchPoints > 1 || /Mobi|Android/i.test(navigator.userAgent);
@@ -571,45 +572,64 @@ function mergeStaticScene() {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SECTION 4 — Player Hand
+   SECTION 4 — Player Hand (GLB model)
 ═══════════════════════════════════════════════════════════ */
 
 const handGroup = new THREE.Group();
 camera.add(handGroup);
-handGroup.position.set(0.32, -0.28, -0.45);
-handGroup.rotation.set(0.15, -0.3, 0.05);
+handGroup.position.set(0.22, -0.26, -0.42);
+handGroup.rotation.set(0.1, -0.25, 0.0);
+handGroup.renderOrder = 999;
 
-const gloveMat = new THREE.MeshStandardMaterial({
-  color: 0x0d0d0d, roughness: 0.88, metalness: 0.06,
-  depthTest: false,
+const gltfLoader = new GLTFLoader();
+gltfLoader.load('./hand.glb', gltf => {
+  const model = gltf.scene;
+  model.scale.setScalar(0.18);
+  model.traverse(o => {
+    if (o.isMesh) {
+      o.renderOrder = 999;
+      o.material = o.material.clone();
+      o.material.depthTest = false;
+      o.material.depthWrite = false;
+    }
+  });
+  handGroup.add(model);
 });
 
-function handBox(w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), gloveMat);
-  m.position.set(x, y, z);
-  m.rotation.set(rx, ry, rz);
-  m.renderOrder = 999;
-  handGroup.add(m);
-  return m;
+// ── Flashlight prop (black cylinder shown instead of hand) ──
+const flashlightProp = new THREE.Group();
+camera.add(flashlightProp);
+flashlightProp.position.set(0.18, -0.22, -0.38);
+flashlightProp.rotation.set(Math.PI / 2, 0, 0);
+flashlightProp.visible = false;
+flashlightProp.renderOrder = 999;
+
+const _fpBodyMesh = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.022, 0.025, 0.18, 12),
+  new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4, metalness: 0.7, depthTest: false, depthWrite: false })
+);
+_fpBodyMesh.renderOrder = 999;
+flashlightProp.add(_fpBodyMesh);
+
+const fpLensMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, emissive: 0x6699ff, emissiveIntensity: 0, roughness: 0.2, metalness: 0.5, depthTest: false, depthWrite: false });
+const _fpLensMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.030, 0.022, 0.018, 12), fpLensMat);
+_fpLensMesh.position.y = -0.099;
+_fpLensMesh.renderOrder = 999;
+flashlightProp.add(_fpLensMesh);
+
+// ── Hand visibility helper ──────────────────────────────────
+function setHandVisible(vis) {
+  if (vis && flashlightOn) {
+    handGroup.visible = false;
+    flashlightProp.visible = true;
+  } else if (vis) {
+    handGroup.visible = true;
+    flashlightProp.visible = false;
+  } else {
+    handGroup.visible = false;
+    flashlightProp.visible = false;
+  }
 }
-
-// Palm / back of hand
-handBox(0.10, 0.07, 0.13,  0,       0,      0);
-// Fingers (slightly splayed)
-handBox(0.022, 0.062, 0.022,  0.031,  0.062, -0.030);  // index
-handBox(0.022, 0.068, 0.022,  0.009,  0.066, -0.032);  // middle
-handBox(0.020, 0.062, 0.020, -0.012,  0.062, -0.030);  // ring
-handBox(0.016, 0.050, 0.016, -0.032,  0.056, -0.026);  // pinky
-// Thumb (angled)
-handBox(0.022, 0.040, 0.022,  0.052,  0.012,  0.010, 0, 0, -0.5);
-// Knuckle ridge
-handBox(0.10, 0.016, 0.022,  0,  0.037, -0.020);
-// Forearm stub (below palm)
-handBox(0.09, 0.09, 0.14,  0.0, -0.11, 0.05);
-
-// Keep hand always rendered on top
-handGroup.renderOrder = 999;
-handGroup.traverse(o => { if (o.isMesh) { o.material.depthTest = false; o.renderOrder = 999; } });
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 5 — Input Manager
@@ -889,7 +909,7 @@ function handleChair() {
 
     isSitting = true;
     gameState = STATE.SITTING;
-    handGroup.visible = false;
+    setHandVisible(false);
 
     // Sit at desk: player faces +Z (yaw=Math.PI) toward the monitor
     const sitPos = new THREE.Vector3(-3.7, CFG.sitHeight, 3.5);
@@ -900,7 +920,7 @@ function handleChair() {
     // Stand back up (called from closeComputerMenu)
     isSitting = false;
     gameState = STATE.EXPLORING;
-    handGroup.visible = true;
+    setHandVisible(true);
     startCameraTween(savedStandPos, savedYaw, 0, CFG.tweenDuration, () => {
       if (!isMobile) canvas.requestPointerLock();
     });
@@ -915,7 +935,7 @@ function handleComputer() {
 
 function openComputerMenu() {
   gameState = STATE.MENU;
-  handGroup.visible = false;
+  setHandVisible(false);
   document.getElementById('computer-menu').style.display = 'flex';
   if (document.pointerLockElement) document.exitPointerLock();
   lockOverlay.style.display = 'none';
@@ -932,7 +952,7 @@ function closeComputerMenu() {
   } else {
     // Came via direct computer interaction while standing
     gameState = STATE.EXPLORING;
-    handGroup.visible = true;
+    setHandVisible(true);
     if (!isMobile) canvas.requestPointerLock();
   }
 }
@@ -958,9 +978,11 @@ document.getElementById('heist-cards').innerHTML = HEIST_TARGETS.map(t => `
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {
   flashlightOn = !flashlightOn;
-  flashlight.intensity = flashlightOn ? 9 : 0;
-  const btn = document.getElementById('btn-flashlight');
-  btn.classList.toggle('on', flashlightOn);
+  flashlight.intensity = flashlightOn ? 90 : 0;
+  fpLensMat.emissiveIntensity = flashlightOn ? 2 : 0;
+  document.getElementById('btn-flashlight').classList.toggle('on', flashlightOn);
+  const handShouldBeVisible = gameState === STATE.EXPLORING;
+  setHandVisible(handShouldBeVisible);
 }
 
 // ── Main interact dispatcher ────────────────────────────────

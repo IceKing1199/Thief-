@@ -167,16 +167,26 @@ canvas { display: block; width: 100vw; height: 100vh; }
   color: #cce0ff;
   box-shadow: 0 0 14px rgba(150,190,255,0.5);
 }
+
+/* ── Mobile overrides ───────────────────────────────────── */
+@media (pointer: coarse) {
+  #crosshair { width: 10px; height: 10px; }
+  #interaction-prompt { font-size: 15px; padding: 7px 18px; top: calc(50% + 30px); }
+  /* Larger safe area for bottom buttons */
+  #joystick-zone  { bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px); }
+  #btn-interact   { bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px); }
+  #btn-flashlight { bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px); }
+}
 </style>
 </head>
 
 <body>
 
-<!-- Pointer-lock start screen -->
+<!-- Pointer-lock start screen (desktop only; hidden immediately on mobile) -->
 <div id="pointer-lock-overlay">
   <h1>THIEF SIMULATOR</h1>
-  <p>Click anywhere to enter the hideout</p>
-  <div class="hint">WASD — Move &nbsp;|&nbsp; Mouse — Look &nbsp;|&nbsp; E — Interact &nbsp;|&nbsp; F — Flashlight</div>
+  <p id="overlay-text">Click anywhere to enter the hideout</p>
+  <div class="hint" id="overlay-hint">WASD — Move &nbsp;|&nbsp; Mouse — Look &nbsp;|&nbsp; E — Interact &nbsp;|&nbsp; F — Flashlight</div>
 </div>
 
 <!-- HUD -->
@@ -202,6 +212,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 <script type="module">
 import * as THREE from 'three';
+
+// Detect mobile first — used throughout all sections
+const isMobile = navigator.maxTouchPoints > 1 || /Mobi|Android/i.test(navigator.userAgent);
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 1 — Constants & Config
@@ -229,9 +242,9 @@ const STATE = { EXPLORING: 'EXPLORING', SITTING: 'SITTING', MENU: 'MENU' };
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !isMobile; // shadows are expensive on mobile GPUs
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.65;
@@ -496,12 +509,14 @@ const lockOverlay = document.getElementById('pointer-lock-overlay');
 
 function requestLock() {
   if (gameState === STATE.MENU) return;
+  if (isMobile) { lockOverlay.style.display = 'none'; return; }
   canvas.requestPointerLock();
 }
 lockOverlay.addEventListener('click', requestLock);
 canvas.addEventListener('click', () => { if (!isPointerLocked && gameState !== STATE.MENU) requestLock(); });
 
 document.addEventListener('pointerlockchange', () => {
+  if (isMobile) return;
   isPointerLocked = document.pointerLockElement === canvas;
   lockOverlay.style.display = (isPointerLocked || gameState === STATE.MENU) ? 'none' : 'flex';
 });
@@ -525,8 +540,10 @@ document.addEventListener('keyup', e => keys.delete(e.code));
    SECTION 6 — Mobile UI
 ═══════════════════════════════════════════════════════════ */
 
-const isMobile = navigator.maxTouchPoints > 1 || /Mobi|Android/i.test(navigator.userAgent);
-if (isMobile) document.getElementById('mobile-ui').style.display = 'block';
+if (isMobile) {
+  document.getElementById('mobile-ui').style.display = 'block';
+  lockOverlay.style.display = 'none'; // no pointer-lock on mobile — dismiss immediately
+}
 
 // Joystick
 let joystickActive  = false;
@@ -581,6 +598,8 @@ let lookLast     = { x: 0, y: 0 };
 
 document.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (el && el.closest('#mobile-ui')) continue; // don't hijack button taps as look-drag
     if (t.clientX > window.innerWidth * 0.38 && gameState !== STATE.MENU) {
       lookTouchId = t.identifier;
       lookLast = { x: t.clientX, y: t.clientY };
@@ -628,8 +647,8 @@ function registerInteractive(group, tag, label) {
   interactiveRegistry.set(group.uuid, { mesh: group, tag, label, cooldown: false });
 }
 
-registerInteractive(chairGroup,    'chair',    'E — Sit');
-registerInteractive(computerGroup, 'computer', 'E — Use Computer');
+registerInteractive(chairGroup,    'chair',    isMobile ? 'Sit / Stand' : 'E — Sit');
+registerInteractive(computerGroup, 'computer', isMobile ? 'Use Computer' : 'E — Use Computer');
 
 const raycaster = new THREE.Raycaster();
 
@@ -780,8 +799,7 @@ function closeComputerMenu() {
   document.getElementById('computer-menu').style.display = 'none';
   gameState = prevState;
   handGroup.visible = (gameState === STATE.EXPLORING);
-  // Re-request pointer lock
-  canvas.requestPointerLock();
+  if (!isMobile) canvas.requestPointerLock();
 }
 
 document.getElementById('btn-close-menu').addEventListener('click', closeComputerMenu);

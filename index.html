@@ -506,7 +506,6 @@ handGroup.traverse(o => { if (o.isMesh) { o.material.depthTest = false; o.render
 const keys = new Set();
 let isPointerLocked = false;
 let gameState = STATE.EXPLORING;
-let prevState  = STATE.EXPLORING;
 
 // ── Pointer Lock ────────────────────────────────────────────
 const canvas = renderer.domElement;
@@ -652,7 +651,9 @@ function registerInteractive(group, tag, label) {
   interactiveRegistry.set(group.uuid, { mesh: group, tag, label, cooldown: false });
 }
 
-registerInteractive(chairGroup,    'chair',    isMobile ? 'Sit / Stand' : 'E — Sit');
+// Chair triggers the full sit-down → computer flow in one action
+registerInteractive(chairGroup,    'chair',    isMobile ? 'Use Computer' : 'E — Use Computer');
+// Computer is still independently interactive when standing at the desk
 registerInteractive(computerGroup, 'computer', isMobile ? 'Use Computer' : 'E — Use Computer');
 
 const raycaster = new THREE.Raycaster();
@@ -751,18 +752,18 @@ function processTween(delta) {
 }
 
 // ── Saved standing pose ─────────────────────────────────────
-const standingPos = new THREE.Vector3(0, CFG.playerHeight, 2.2);
 let savedStandPos = new THREE.Vector3();
 let savedYaw  = 0;
 
 // ── Chair handler ───────────────────────────────────────────
+// Sitting: one unified action — sit down then auto-open the computer menu.
+// Standing up is triggered by closeComputerMenu() via this same function.
 let isSitting = false;
 
 function handleChair() {
   if (tweenState.active) return;
 
   if (!isSitting) {
-    // Sit down
     savedStandPos.copy(playerRig.position);
     savedYaw = playerRig.rotation.y;
 
@@ -771,23 +772,24 @@ function handleChair() {
     handGroup.visible = false;
 
     const sitPos = new THREE.Vector3(-2, CFG.sitHeight, -2.3);
+    // After sitting tween completes, automatically open the computer menu
     startCameraTween(sitPos, Math.PI, -0.06, CFG.tweenDuration, () => {
-      // Update interaction prompt once seated
-      setCurrentTarget(null);
+      openComputerMenu();
     });
   } else {
-    // Stand up
+    // Stand back up (called from closeComputerMenu)
     isSitting = false;
     gameState = STATE.EXPLORING;
     handGroup.visible = true;
-    startCameraTween(savedStandPos, savedYaw, 0, CFG.tweenDuration, () => {});
+    startCameraTween(savedStandPos, savedYaw, 0, CFG.tweenDuration, () => {
+      if (!isMobile) canvas.requestPointerLock();
+    });
   }
 }
 
-// ── Computer handler ────────────────────────────────────────
+// ── Computer handler (used when standing at the desk directly) ──
 function handleComputer() {
   if (tweenState.active) return;
-  prevState = gameState;
   openComputerMenu();
 }
 
@@ -802,9 +804,17 @@ function openComputerMenu() {
 
 function closeComputerMenu() {
   document.getElementById('computer-menu').style.display = 'none';
-  gameState = prevState;
-  handGroup.visible = (gameState === STATE.EXPLORING);
-  if (!isMobile) canvas.requestPointerLock();
+  setCurrentTarget(null);
+
+  if (isSitting) {
+    // Came via chair — animate standing back up
+    handleChair();
+  } else {
+    // Came via direct computer interaction while standing
+    gameState = STATE.EXPLORING;
+    handGroup.visible = true;
+    if (!isMobile) canvas.requestPointerLock();
+  }
 }
 
 document.getElementById('btn-close-menu').addEventListener('click', closeComputerMenu);

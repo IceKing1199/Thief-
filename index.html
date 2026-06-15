@@ -57,61 +57,58 @@ canvas { display: block; width: 100vw; height: 100vh; }
   white-space: nowrap;
 }
 
-/* ── Computer / Heist menu ──────────────────────────────── */
+/* ── Computer menu ───────────────────────────────────────── */
 #computer-menu {
   position: fixed; inset: 0; z-index: 100;
   display: none; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: rgba(0, 8, 4, 0.94);
-  font-family: 'Courier New', monospace;
-  color: #00ff88;
+  align-items: center; justify-content: center; gap: 28px;
+  background: rgba(0,8,4,0.95);
+  font-family: 'Courier New', monospace; color: #00ff88;
 }
-#computer-menu h2 {
-  font-size: clamp(18px,3vw,28px); letter-spacing: 4px;
-  margin-bottom: 8px; text-transform: uppercase;
+.cm-title { font-size: clamp(13px,2.5vw,18px); letter-spacing: 4px; color: #447755; }
+#heist-map { display: flex; align-items: center; padding: 8px 20px; }
+.map-node {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; transition: transform 0.15s;
 }
-#computer-menu .subtitle {
-  font-size: 12px; color: #447755; margin-bottom: 32px;
-  letter-spacing: 2px;
+.map-node:hover { transform: translateY(-3px); }
+.node-icon {
+  width: 72px; height: 72px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
+  border: 2px solid rgba(0,255,136,0.25); background: rgba(0,255,136,0.05);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-#heist-cards {
-  display: flex; flex-wrap: wrap; gap: 20px;
-  justify-content: center; max-width: 760px; padding: 0 16px;
+.map-node.selected .node-icon { border-color: #00ff88; box-shadow: 0 0 18px rgba(0,255,136,0.4); }
+.map-node.locked .node-icon { background: #050505; border-color: rgba(255,255,255,0.08); font-size: 24px; color: rgba(255,255,255,0.2); }
+.node-label { font-size: 9px; letter-spacing: 1px; color: #447755; text-transform: uppercase; max-width: 72px; text-align: center; }
+.map-node.locked .node-label { color: #222; }
+.map-connector {
+  width: 40px; height: 2px; flex-shrink: 0; margin: 0 4px;
+  background: repeating-linear-gradient(90deg,rgba(0,255,136,0.35) 0px,rgba(0,255,136,0.35) 5px,transparent 5px,transparent 10px);
 }
-.heist-card {
-  background: rgba(0,255,136,0.04);
-  border: 1px solid rgba(0,255,136,0.25);
-  border-radius: 8px; padding: 20px 24px;
-  width: 210px; text-align: left;
-  transition: border-color 0.2s, background 0.2s;
+#heist-detail {
+  width: min(340px,90vw); border: 1px solid rgba(0,255,136,0.25);
+  border-radius: 10px; padding: 20px 24px; background: rgba(0,255,136,0.03); min-height: 130px;
 }
-.heist-card:hover {
-  border-color: rgba(0,255,136,0.6);
-  background: rgba(0,255,136,0.08);
+.detail-name { font-size: clamp(14px,2.5vw,17px); margin-bottom: 14px; letter-spacing: 1px; }
+.detail-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.detail-stat { font-size: 12px; color: #447755; display: flex; gap: 10px; }
+.detail-stat span { color: #00ff88; }
+.detail-locked-msg { font-size: 12px; color: #333; letter-spacing: 2px; text-align: center; padding: 20px 0; }
+.btn-start {
+  background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.5);
+  color: #00ff88; font-family: inherit; font-size: 12px;
+  padding: 8px 22px; border-radius: 4px; cursor: pointer;
+  letter-spacing: 1px; transition: all 0.2s; display: block; width: 100%;
 }
-.heist-card .card-name { font-size: 14px; margin-bottom: 10px; color: #00ff88; }
-.heist-card .card-diff { font-size: 11px; color: #666; margin-bottom: 4px; }
-.heist-card .card-diff span { color: #aaa; }
-.heist-card .card-reward { font-size: 11px; color: #666; margin-bottom: 14px; }
-.heist-card .card-reward span { color: #ffcc44; }
-.btn-select {
-  background: rgba(0,255,136,0.08);
-  border: 1px solid rgba(0,255,136,0.3);
-  color: #00ff88; font-family: inherit;
-  font-size: 11px; padding: 6px 14px;
-  border-radius: 3px; cursor: not-allowed;
-  opacity: 0.5; letter-spacing: 1px;
-}
+.btn-start:hover { background: rgba(0,255,136,0.2); }
 #btn-close-menu {
-  margin-top: 32px;
-  background: transparent;
-  border: 1px solid rgba(0,255,136,0.3);
-  color: #00ff88; font-family: inherit;
-  font-size: 13px; padding: 10px 32px;
-  border-radius: 4px; cursor: pointer;
+  background: transparent; border: 1px solid rgba(0,255,136,0.2);
+  color: #447755; font-family: inherit; font-size: 12px;
+  padding: 8px 28px; border-radius: 4px; cursor: pointer;
   letter-spacing: 2px; transition: all 0.2s;
 }
-#btn-close-menu:hover { background: rgba(0,255,136,0.12); }
+#btn-close-menu:hover { color: #00ff88; border-color: rgba(0,255,136,0.5); }
 
 /* ── Mobile UI ──────────────────────────────────────────── */
 #mobile-ui { display: none; }
@@ -195,10 +192,10 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 <!-- Heist selection menu (shown when using computer) -->
 <div id="computer-menu">
-  <h2>Select Target</h2>
-  <div class="subtitle">// NEXT OPERATION //</div>
-  <div id="heist-cards"></div>
-  <button id="btn-close-menu">[ CLOSE TERMINAL ]</button>
+  <div class="cm-title">// ВЫБОР ЦЕЛИ //</div>
+  <div id="heist-map"></div>
+  <div id="heist-detail"></div>
+  <button id="btn-close-menu">[ ЗАКРЫТЬ ТЕРМИНАЛ ]</button>
 </div>
 
 <!-- Mobile controls -->
@@ -943,6 +940,8 @@ function openComputerMenu() {
   if (document.pointerLockElement) document.exitPointerLock();
   lockOverlay.style.display = 'none';
   setCurrentTarget(null);
+  renderHeistMap();
+  renderHeistDetail();
 }
 
 function closeComputerMenu() {
@@ -964,19 +963,51 @@ document.getElementById('btn-close-menu').addEventListener('click', closeCompute
 
 // ── Heist targets ───────────────────────────────────────────
 const HEIST_TARGETS = [
-  { name: 'City Bank Vault',    difficulty: 'Hard',   reward: '$250,000', diffColor: '#ff4444' },
-  { name: 'Art Museum Exhibit', difficulty: 'Medium', reward: '$85,000',  diffColor: '#ffaa22' },
-  { name: 'Penthouse Jewelry',  difficulty: 'Easy',   reward: '$30,000',  diffColor: '#44ff88' },
+  { id:'house',  name:'Ограбление дома', icon:'🏠', reward:'$20,000',  stashes:1, time:'3 мин'  },
+  { id:'office', name:'Офис компании',   icon:'🏢', reward:'$55,000',  stashes:2, time:'5 мин'  },
+  { id:'bank',   name:'City Bank Vault', icon:'🏦', reward:'$250,000', stashes:4, time:'10 мин' },
 ];
+let unlockedCount = 1;
+let selectedNode  = 0;
 
-document.getElementById('heist-cards').innerHTML = HEIST_TARGETS.map(t => `
-  <div class="heist-card">
-    <div class="card-name">${t.name}</div>
-    <div class="card-diff">DIFFICULTY: <span style="color:${t.diffColor}">${t.difficulty}</span></div>
-    <div class="card-reward">REWARD: <span>${t.reward}</span></div>
-    <button class="btn-select" disabled>[ SELECT ]</button>
-  </div>
-`).join('');
+function renderHeistMap() {
+  const map = document.getElementById('heist-map');
+  map.innerHTML = '';
+  HEIST_TARGETS.forEach((t, i) => {
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'map-connector';
+      map.appendChild(conn);
+    }
+    const locked = i >= unlockedCount;
+    const node = document.createElement('div');
+    node.className = 'map-node' + (i === selectedNode ? ' selected' : '') + (locked ? ' locked' : '');
+    node.innerHTML = `<div class="node-icon">${locked ? '🔒' : t.icon}</div><div class="node-label">${locked ? '???' : t.name.split(' ')[0]}</div>`;
+    node.addEventListener('click', () => { selectedNode = i; renderHeistMap(); renderHeistDetail(); });
+    map.appendChild(node);
+  });
+}
+
+function renderHeistDetail() {
+  const el = document.getElementById('heist-detail');
+  const t = HEIST_TARGETS[selectedNode];
+  const locked = selectedNode >= unlockedCount;
+  if (locked) {
+    el.innerHTML = `<div class="detail-locked-msg">🔒 ЗАДАНИЕ ЗАБЛОКИРОВАНО<br><br><span style="font-size:10px;color:#1a1a1a">Пройди предыдущие ограбления</span></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="detail-name">${t.name}</div>
+    <div class="detail-stats">
+      <div class="detail-stat">НАГРАДА  <span>${t.reward}</span></div>
+      <div class="detail-stat">ТАЙНИКИ  <span>${t.stashes}</span></div>
+      <div class="detail-stat">ВРЕМЯ    <span>${t.time}</span></div>
+    </div>
+    <button class="btn-start" id="btn-start-heist">[ НАЧАТЬ ОГРАБЛЕНИЕ ]</button>`;
+  document.getElementById('btn-start-heist').addEventListener('click', () => {
+    alert('Загрузка ограбления...');
+  });
+}
 
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {

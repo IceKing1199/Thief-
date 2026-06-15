@@ -247,7 +247,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = !isMobile; // shadows are expensive on mobile GPUs
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.65;
+renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
@@ -263,18 +263,23 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 playerRig.add(camera);
 
 // Lights
-const ambientLight = new THREE.AmbientLight(0x1a1a2e, 0.18);
+const ambientLight = new THREE.AmbientLight(0x2a2a40, 0.5);
 scene.add(ambientLight);
 
-const ceilingLight = new THREE.PointLight(0x4a3f6b, 0.5, 9, 2);
+const ceilingLight = new THREE.PointLight(0x7a70a0, 1.2, 12, 2);
 ceilingLight.position.set(0, 3.2, 0);
 scene.add(ceilingLight);
 
-const deskLampLight = new THREE.PointLight(0xff9933, 1.4, 3.2, 2);
+const deskLampLight = new THREE.PointLight(0xff9933, 2.5, 5.5, 2);
 deskLampLight.position.set(-1.1, 1.42, -3.1);
 deskLampLight.castShadow = true;
 deskLampLight.shadow.mapSize.set(512, 512);
 scene.add(deskLampLight);
+
+// Fill light for the right wall / shelves corner
+const shelfLight = new THREE.PointLight(0x4455aa, 0.6, 4, 2);
+shelfLight.position.set(3.5, 2.5, -4.0);
+scene.add(shelfLight);
 
 // Flashlight (child of camera so it moves with view)
 const flashlight = new THREE.SpotLight(0xccddff, 0, 14, Math.PI / 10, 0.35, 2);

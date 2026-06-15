@@ -246,13 +246,13 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = !isMobile; // shadows are expensive on mobile GPUs
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.4;
+renderer.toneMapping = THREE.LinearToneMapping;
+renderer.toneMappingExposure = 1.6;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x050508, 6, 18);
+// No fog — indoor room, fog was making everything black
 
 // Camera rig: playerRig holds position+yaw; camera holds pitch
 const playerRig = new THREE.Object3D();
@@ -263,18 +263,18 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 playerRig.add(camera);
 
 // Lights — single warm bulb atmosphere
-const ambientLight = new THREE.AmbientLight(0xc8a060, 0.55);
+const ambientLight = new THREE.AmbientLight(0xffd080, 0.9);
 scene.add(ambientLight);
 
 // Main room light — bare hanging bulb
-const roomBulbLight = new THREE.PointLight(0xffcc77, 6.0, 14, 1.5);
+const roomBulbLight = new THREE.PointLight(0xffcc77, 15.0, 20, 1.0);
 roomBulbLight.position.set(-1.0, 2.68, -0.5);
 roomBulbLight.castShadow = !isMobile;
 if (!isMobile) roomBulbLight.shadow.mapSize.set(512, 512);
 scene.add(roomBulbLight);
 
 // Soft fill light — warms up corners the bulb doesn't reach
-const fillLight = new THREE.PointLight(0xff9944, 1.2, 10, 2);
+const fillLight = new THREE.PointLight(0xff9944, 2.5, 14, 1.5);
 fillLight.position.set(2.5, 2.0, -2.0);
 scene.add(fillLight);
 
@@ -331,9 +331,9 @@ function addCollider(minX, maxX, minZ, maxZ) {
 }
 
 // ── Palette ──────────────────────────────────────────────────
-const floorMat  = mat(0x1a1209, 0.92, 0.0);  // dark wood planks
-const wallMat   = mat(0x2c2318, 0.88, 0.0);  // dirty warm plaster
-const ceilMat   = mat(0x221e14, 0.93, 0.0);  // yellowed ceiling
+const floorMat  = mat(0x2a1c0e, 0.88, 0.0);  // dark wood planks
+const wallMat   = mat(0x3d3020, 0.85, 0.0);  // dirty warm plaster
+const ceilMat   = mat(0x2e2818, 0.90, 0.0);  // yellowed ceiling
 const trimMat   = mat(0x1a1208, 0.9,  0.05); // skirting board
 const deskMat   = mat(0x1e1408, 0.82, 0.05);
 const legMat    = mat(0x111008, 0.9,  0.1);

@@ -247,7 +247,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = !isMobile; // shadows are expensive on mobile GPUs
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.4;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
@@ -263,15 +263,20 @@ const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerH
 playerRig.add(camera);
 
 // Lights — single warm bulb atmosphere
-const ambientLight = new THREE.AmbientLight(0x1a1208, 0.3);
+const ambientLight = new THREE.AmbientLight(0xc8a060, 0.55);
 scene.add(ambientLight);
 
-// Main room light — bare hanging bulb (warm, slightly orange-yellow)
-const roomBulbLight = new THREE.PointLight(0xffaa44, 3.2, 11, 2);
+// Main room light — bare hanging bulb
+const roomBulbLight = new THREE.PointLight(0xffcc77, 6.0, 14, 1.5);
 roomBulbLight.position.set(-1.0, 2.68, -0.5);
 roomBulbLight.castShadow = !isMobile;
 if (!isMobile) roomBulbLight.shadow.mapSize.set(512, 512);
 scene.add(roomBulbLight);
+
+// Soft fill light — warms up corners the bulb doesn't reach
+const fillLight = new THREE.PointLight(0xff9944, 1.2, 10, 2);
+fillLight.position.set(2.5, 2.0, -2.0);
+scene.add(fillLight);
 
 
 // Flashlight (child of camera so it moves with view)

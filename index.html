@@ -110,6 +110,43 @@ canvas { display: block; width: 100vw; height: 100vh; }
 }
 #btn-close-menu:hover { color: #00ff88; border-color: rgba(0,255,136,0.5); }
 
+/* ── Email modal ─────────────────────────────────────────── */
+#email-modal {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(0,4,2,0.92);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+#email-window {
+  width: min(480px,96vw); max-height: 80vh;
+  border: 1px solid rgba(0,255,136,0.3); border-radius: 8px;
+  background: #020d06; display: flex; flex-direction: column; overflow: hidden;
+}
+.email-bar {
+  background: rgba(0,255,136,0.07); border-bottom: 1px solid rgba(0,255,136,0.15);
+  padding: 8px 14px; font-size: 10px; letter-spacing: 2px; color: #447755;
+}
+.email-header {
+  border-bottom: 1px solid rgba(0,255,136,0.1);
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+.email-row { font-size: 11px; color: #447755; }
+.email-lbl { color: rgba(0,255,136,0.4); margin-right: 6px; }
+.email-body {
+  padding: 16px 14px; font-size: 12px; line-height: 1.75;
+  color: #b0c8b8; overflow-y: auto; flex: 1;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.email-body p { margin: 0; }
+.email-actions { border-top: 1px solid rgba(0,255,136,0.1); padding: 12px 14px; display: flex; gap: 10px; }
+.email-btn {
+  flex: 1; background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.25);
+  color: #447755; font-family: inherit; font-size: 11px;
+  padding: 9px 0; border-radius: 4px; cursor: pointer; letter-spacing: 1px; transition: all 0.25s;
+}
+.email-btn:hover { color: #00ff88; border-color: rgba(0,255,136,0.5); }
+.email-btn.abort-active  { background: rgba(255,40,40,0.18); border-color: #ff2828; color: #ff4444; }
+.email-btn.accept-active { background: rgba(0,255,80,0.18);  border-color: #00ff50; color: #00ff88; }
+
 /* ── Mobile UI ──────────────────────────────────────────── */
 #mobile-ui { display: none; }
 
@@ -174,6 +211,9 @@ canvas { display: block; width: 100vw; height: 100vh; }
   #btn-interact   { bottom: max(18px, env(safe-area-inset-bottom, 0px) + 6px); }
   #btn-flashlight { bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px); }
 }
+@media (orientation: landscape) and (pointer: coarse) {
+  #computer-menu { overflow-y: auto; justify-content: flex-start; padding: 16px 0 24px; gap: 16px; }
+}
 </style>
 </head>
 
@@ -192,6 +232,28 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 <!-- Heist selection menu (shown when using computer) -->
 <div id="computer-menu">
+  <div id="email-modal" style="display:none">
+    <div id="email-window">
+      <div class="email-bar">✉ ВХОДЯЩИЕ — 1 непрочитанное</div>
+      <div class="email-header">
+        <div class="email-row"><span class="email-lbl">ОТ:</span> ТвояДаркнетГерл</div>
+        <div class="email-row"><span class="email-lbl">ТЕМА:</span> Проверка новичка №404</div>
+      </div>
+      <div class="email-body">
+        <p>Йо, новенький.</p>
+        <p>Говорят, ты хочешь попасть в «высшую лигу». Считай это тестом.</p>
+        <p>Есть одна максимально обычная семья уровня «скидки в супермаркете и магнитики на холодильнике». По слухам, они укатили в отпуск искать вайб и приключения.</p>
+        <p>Твоя задача — выяснить, правда ли в детской существует тот самый легендарный кейс, о котором местные форумные эксперты рассказывают уже третий месяц. Одни говорят, там сокровища. Другие — коллекция рисунков с динозаврами. Третьи уверены, что это вообще миф. В любом случае найти код — задача не из лёгких.</p>
+        <p>Не облажайся. Отчёт в стандартной форме: что нашёл, насколько эпично выглядело и сколько раз почувствовал себя героем дешёвого криминального сериала. Делим 70/30, 70 мне.</p>
+        <p>Удачи.</p>
+        <p>— ТвояДаркнетГерл 🖤</p>
+      </div>
+      <div class="email-actions">
+        <button class="email-btn" id="btn-abort">[ ЗАБЛОКИРОВАТЬ ]</button>
+        <button class="email-btn" id="btn-accept">[ ПРИСТУПИТЬ ]</button>
+      </div>
+    </div>
+  </div>
   <div class="cm-title">// ВЫБОР ЦЕЛИ //</div>
   <div id="heist-map"></div>
   <div id="heist-detail"></div>
@@ -1004,10 +1066,32 @@ function renderHeistDetail() {
       <div class="detail-stat">ВРЕМЯ    <span>${t.time}</span></div>
     </div>
     <button class="btn-start" id="btn-start-heist">[ НАЧАТЬ ОГРАБЛЕНИЕ ]</button>`;
-  document.getElementById('btn-start-heist').addEventListener('click', () => {
-    alert('Загрузка ограбления...');
-  });
+  document.getElementById('btn-start-heist').addEventListener('click', showEmailModal);
 }
+
+// ── Email modal ──────────────────────────────────────────────
+function showEmailModal() {
+  document.getElementById('email-modal').style.display = 'flex';
+}
+function closeEmailModal() {
+  document.getElementById('email-modal').style.display = 'none';
+  const ab = document.getElementById('btn-abort');
+  const ac = document.getElementById('btn-accept');
+  ab.className = 'email-btn'; ab.textContent = '[ ЗАБЛОКИРОВАТЬ ]';
+  ac.className = 'email-btn'; ac.textContent = '[ ПРИСТУПИТЬ ]';
+}
+document.getElementById('btn-abort').addEventListener('click', () => {
+  const btn = document.getElementById('btn-abort');
+  btn.className = 'email-btn abort-active';
+  btn.textContent = '[ ✗ ОТКЛОНЕНО ]';
+  setTimeout(closeEmailModal, 900);
+});
+document.getElementById('btn-accept').addEventListener('click', () => {
+  const btn = document.getElementById('btn-accept');
+  btn.className = 'email-btn accept-active';
+  btn.textContent = '[ ✓ ПРИНЯТО — ЗАГРУЗКА... ]';
+  setTimeout(() => { closeEmailModal(); alert('Загрузка ограбления...'); }, 900);
+});
 
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {

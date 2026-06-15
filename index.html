@@ -8,7 +8,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://esm.sh/three@0.158.0"
+    "three": "https://esm.sh/three@0.158.0",
+    "three/addons/": "https://esm.sh/three@0.158.0/examples/jsm/"
   }
 }
 </script>
@@ -212,6 +213,7 @@ canvas { display: block; width: 100vw; height: 100vh; }
 
 <script type="module">
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Detect mobile first — used throughout all sections
 const isMobile = navigator.maxTouchPoints > 1 || /Mobi|Android/i.test(navigator.userAgent);
@@ -241,7 +243,7 @@ const STATE = { EXPLORING: 'EXPLORING', SITTING: 'SITTING', MENU: 'MENU' };
 ═══════════════════════════════════════════════════════════ */
 
 // Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = !isMobile; // shadows are expensive on mobile GPUs
@@ -270,7 +272,7 @@ scene.add(ambientLight);
 const roomBulbLight = new THREE.PointLight(0xffcc77, 15.0, 20, 1.0);
 roomBulbLight.position.set(-1.0, 2.68, -0.5);
 roomBulbLight.castShadow = !isMobile;
-if (!isMobile) roomBulbLight.shadow.mapSize.set(512, 512);
+if (!isMobile) roomBulbLight.shadow.mapSize.set(256, 256);
 scene.add(roomBulbLight);
 
 // Soft fill light — warms up corners the bulb doesn't reach
@@ -295,6 +297,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (typeof joystickRect !== 'undefined') joystickRect = joystickZone.getBoundingClientRect();
 });
 
 /* ═══════════════════════════════════════════════════════════
@@ -398,9 +401,7 @@ b3.rotation.z = -0.14;
 addBox(scene, 0.02, 0.78, 0.95, 4.94, 1.65, -1.5,
   mat(0x050408, 0.98, 0, { emissive: 0x2233bb, emissiveIntensity: 0.12 }), false);
 // Window leak point light
-const windowLeak = new THREE.PointLight(0x3344cc, 0.18, 2.2, 2);
-windowLeak.position.set(4.5, 1.65, -1.5);
-scene.add(windowLeak);
+// windowLeak light removed — boards block view, emissive handles the effect
 
 // ── Hanging lamp (visual) ─────────────────────────────────────
 // Ceiling rose
@@ -469,9 +470,7 @@ towerGroup.position.set(-4.5, 0, 3.95);
 scene.add(towerGroup);
 
 // Screen soft glow point light
-const screenGlow = new THREE.PointLight(0x00ff88, 0.3, 1.2, 2);
-screenGlow.position.set(-3.7, 1.2, 3.7);
-scene.add(screenGlow);
+// screenGlow light removed — screen emissive material is sufficient
 
 // ── Mattress (back-right corner, on floor) ────────────────────
 addBox(scene, 1.9, 0.18, 1.15, 3.0, 0.09, -3.7,
@@ -529,6 +528,47 @@ addBox(scene, 0.02, 0.008, 0.55, -4.46, 0.004, 3.85, mat(0x0f0f0f, 0.95, 0), fal
 
 // ── Register interactive objects ────────────────────────────
 // (populated in Section 7)
+
+// ── Static geometry merge (reduces ~95 draw calls → ~15) ────
+// Must run AFTER all scene objects are added but BEFORE the loop.
+// Interactive groups and hand are excluded so raycasting still works.
+function isDescendant(obj, ancestor) {
+  let cur = obj.parent;
+  while (cur) { if (cur === ancestor) return true; cur = cur.parent; }
+  return false;
+}
+
+function mergeStaticScene() {
+  scene.updateMatrixWorld(true);
+  const byMat = new Map();
+  const EXCLUDE = [chairGroup, computerGroup, towerGroup, handGroup];
+
+  scene.traverse(obj => {
+    if (!obj.isMesh) return;
+    if (obj === screenMesh) return; // keep screen for emissive + interaction
+    for (const g of EXCLUDE) if (obj === g || isDescendant(obj, g)) return;
+
+    const key = obj.material.uuid;
+    if (!byMat.has(key)) byMat.set(key, { mat: obj.material, list: [] });
+    byMat.get(key).list.push(obj);
+  });
+
+  for (const { mat, list } of byMat.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map(o => {
+      const g = o.geometry.clone();
+      g.applyMatrix4(o.matrixWorld);
+      return g;
+    });
+    const merged = mergeGeometries(geos, false);
+    if (!merged) { geos.forEach(g => g.dispose()); continue; }
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.receiveShadow = true; mesh.castShadow = true;
+    scene.add(mesh);
+    list.forEach(o => { o.removeFromParent(); o.geometry.dispose(); });
+    geos.forEach(g => g.dispose());
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 4 — Player Hand
@@ -627,6 +667,7 @@ let joystickTouchId = null;
 const joystickDelta = { x: 0, y: 0 };
 const joystickZone  = document.getElementById('joystick-zone');
 const joystickKnob  = document.getElementById('joystick-knob');
+let joystickRect = joystickZone.getBoundingClientRect(); // cached — updated on resize
 
 joystickZone.addEventListener('touchstart', e => {
   e.preventDefault();
@@ -639,7 +680,7 @@ joystickZone.addEventListener('touchmove', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
     if (t.identifier !== joystickTouchId) continue;
-    const rect = joystickZone.getBoundingClientRect();
+    const rect = joystickRect;
     const cx = rect.left + rect.width  / 2;
     const cy = rect.top  + rect.height / 2;
     let dx = t.clientX - cx;
@@ -728,6 +769,21 @@ registerInteractive(chairGroup,    'chair',    isMobile ? 'Use Computer' : 'E �
 // Computer is still independently interactive when standing at the desk
 registerInteractive(computerGroup, 'computer', isMobile ? 'Use Computer' : 'E — Use Computer');
 
+// Pre-build raycaster target list ONCE — no per-frame traversal/allocation
+const SCREEN_CENTER = { x: 0, y: 0 };
+let raycastTargets = [];
+(function buildRaycastTargets() {
+  const seen = new Set();
+  for (const entry of interactiveRegistry.values()) {
+    entry.mesh.traverse(o => {
+      if (o.isMesh && !seen.has(o.uuid)) { seen.add(o.uuid); raycastTargets.push(o); }
+    });
+  }
+})();
+
+// Merge static geometry now that interactive objects are known
+mergeStaticScene();
+
 const raycaster = new THREE.Raycaster();
 
 function updateInteractionSystem() {
@@ -736,17 +792,9 @@ function updateInteractionSystem() {
     return;
   }
 
-  raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+  raycaster.setFromCamera(SCREEN_CENTER, camera); // no {} allocation each frame
 
-  // Collect meshes from interactive groups
-  const candidates = [];
-  for (const entry of interactiveRegistry.values()) {
-    entry.mesh.traverse(o => { if (o.isMesh) candidates.push(o); });
-  }
-  // Deduplicate
-  const unique = [...new Set(candidates)];
-
-  const hits = raycaster.intersectObjects(unique, false);
+  const hits = raycaster.intersectObjects(raycastTargets, false); // pre-built list
 
   if (hits.length > 0 && hits[0].distance < CFG.interactDist) {
     // Walk up parent chain to find registered entry
@@ -1001,7 +1049,6 @@ function updateHandBob(delta) {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
 
   processMovement(delta);
@@ -1018,7 +1065,7 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-animate();
+renderer.setAnimationLoop(animate);
 </script>
 </body>
 </html>

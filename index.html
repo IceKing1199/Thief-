@@ -1260,9 +1260,9 @@ function buildMissionScene() {
     new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.9 }));
   found.position.set(0, 0.14, -8); missionRoot.add(found);
 
-  // Windows with warm interior glow
+  // Windows — dark glass (no interior light)
   const winGlow = new THREE.MeshStandardMaterial(
-    { color: 0x332200, emissive: 0xffaa33, emissiveIntensity: 0.7, roughness: 0.2 });
+    { color: 0x08111e, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.65 });
   const frameMat2 = new THREE.MeshStandardMaterial({ color: 0x181614, roughness: 0.8 });
   [[-2.0, 3, -5.51], [2.0, 3, -5.51]].forEach(([wx, wy, wz]) => {
     const win = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 0.05), winGlow);
@@ -1273,9 +1273,6 @@ function buildMissionScene() {
         new THREE.BoxGeometry(fx === 0 ? 1.32 : 0.06, fy === 0 ? 0.06 : 1.02, 0.07), frameMat2);
       fr.position.set(wx, wy + fy, wz - 0.01); missionRoot.add(fr);
     });
-    // Warm light spilling out
-    const wl = new THREE.PointLight(0xffaa44, 3, 4, 2);
-    wl.position.set(wx, wy, wz + 0.5); missionRoot.add(wl);
   });
 
   // Door with frame and canopy
@@ -1402,7 +1399,7 @@ function buildMissionScene() {
   [[AX, WZ], [AX, -WZ], [-AX, WZ], [-AX, -WZ]].forEach(([cwx, cwz]) => {
     const wg = new THREE.Group();
     wg.position.set(cwx, WR, cwz);
-    wg.rotation.z = Math.PI / 2;
+    wg.rotation.x = Math.PI / 2;
     [[tirGeo, whlMat], [rimGeo, rimM], [hubGeo, chrMat]].forEach(([g, m]) => {
       const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; wg.add(mesh);
     });
@@ -1456,7 +1453,7 @@ async function startMission() {
 
   hubSceneNodes.forEach(o => { o.visible = false; });
   scene.background = new THREE.Color(0x18202e);
-  scene.fog = new THREE.Fog(0x18202e, 9, 34);
+  scene.fog = new THREE.Fog(0x18202e, 4, 18);
   missionRoot.visible = true;
 
   colliders.length = 0;

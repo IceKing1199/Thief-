@@ -403,8 +403,8 @@ fillLight.position.set(2.5, 2.0, -2.0);
 scene.add(fillLight);
 
 
-// Flashlight (child of camera so it moves with view)
-const flashlight = new THREE.SpotLight(0xccddff, 0, 14, Math.PI / 10, 0.35, 2);
+// Flashlight — wide cone (30°) + soft fill for realistic torch feel
+const flashlight = new THREE.SpotLight(0xddeeff, 0, 35, Math.PI / 6, 0.45, 1.5);
 flashlight.position.set(0, 0, -0.1);
 flashlight.castShadow = false;
 const flashlightTarget = new THREE.Object3D();
@@ -412,6 +412,12 @@ flashlightTarget.position.set(0, 0, -1);
 camera.add(flashlightTarget);
 flashlight.target = flashlightTarget;
 camera.add(flashlight);
+
+// Wide soft fill (spill light around main beam)
+const flashlightFill = new THREE.SpotLight(0xaabbdd, 0, 18, Math.PI / 3.5, 0.92, 2.5);
+flashlightFill.position.set(0, 0, -0.1);
+flashlightFill.target = flashlightTarget;
+camera.add(flashlightFill);
 let flashlightOn = false;
 
 // Resize handler
@@ -1226,84 +1232,198 @@ function buildMissionScene() {
   missionRoot = new THREE.Group();
   scene.add(missionRoot);
 
-  missionRoot.add(new THREE.AmbientLight(0x223355, 0.6));
+  // ── Lighting ────────────────────────────────────────────
+  missionRoot.add(new THREE.AmbientLight(0x3a4a60, 1.4));
+  const moonDir = new THREE.DirectionalLight(0x5a6880, 0.45);
+  moonDir.position.set(6, 12, 8);
+  missionRoot.add(moonDir);
 
-  // Asphalt ground
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40),
-    new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.95 }));
+  // ── Ground (asphalt, large to match fog) ───────────────
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60),
+    new THREE.MeshStandardMaterial({ color: 0x0f1113, roughness: 0.97 }));
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
   missionRoot.add(ground);
 
-  // House exterior
-  const houseMat = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.9 });
-  const house = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 5), houseMat);
+  // ── House exterior (detailed) ──────────────────────────
+  const house = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 5),
+    new THREE.MeshStandardMaterial({ color: 0x252220, roughness: 0.88 }));
   house.position.set(0, 2.5, -8); house.castShadow = true; house.receiveShadow = true;
   missionRoot.add(house);
 
-  const winMat = new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0x221800, emissiveIntensity: 0.5 });
-  [[-1.8, 3, -5.51], [1.8, 3, -5.51]].forEach(([x, y, z]) => {
-    const w = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.05), winMat);
-    w.position.set(x, y, z); missionRoot.add(w);
+  // Roof overhang
+  const houseRoof = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.28, 5.4),
+    new THREE.MeshStandardMaterial({ color: 0x1a1815, roughness: 0.92 }));
+  houseRoof.position.set(0, 5.14, -8); missionRoot.add(houseRoof);
+
+  // Foundation strip
+  const found = new THREE.Mesh(new THREE.BoxGeometry(8.1, 0.28, 5.2),
+    new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.9 }));
+  found.position.set(0, 0.14, -8); missionRoot.add(found);
+
+  // Windows with warm interior glow
+  const winGlow = new THREE.MeshStandardMaterial(
+    { color: 0x332200, emissive: 0xffaa33, emissiveIntensity: 0.7, roughness: 0.2 });
+  const frameMat2 = new THREE.MeshStandardMaterial({ color: 0x181614, roughness: 0.8 });
+  [[-2.0, 3, -5.51], [2.0, 3, -5.51]].forEach(([wx, wy, wz]) => {
+    const win = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.0, 0.05), winGlow);
+    win.position.set(wx, wy, wz); missionRoot.add(win);
+    // Window frames (4 sides)
+    [[-0.62, 0], [0.62, 0], [0, 0.48], [0, -0.48]].forEach(([fx, fy]) => {
+      const fr = new THREE.Mesh(
+        new THREE.BoxGeometry(fx === 0 ? 1.32 : 0.06, fy === 0 ? 0.06 : 1.02, 0.07), frameMat2);
+      fr.position.set(wx, wy + fy, wz - 0.01); missionRoot.add(fr);
+    });
+    // Warm light spilling out
+    const wl = new THREE.PointLight(0xffaa44, 3, 4, 2);
+    wl.position.set(wx, wy, wz + 0.5); missionRoot.add(wl);
   });
 
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 0.06),
-    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.8 }));
-  door.position.set(0, 1.05, -5.51); missionRoot.add(door);
+  // Door with frame and canopy
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.15, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x161008, roughness: 0.82 }));
+  door.position.set(0, 1.075, -5.51); missionRoot.add(door);
+  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.12, 2.24, 0.10),
+    new THREE.MeshStandardMaterial({ color: 0x1c1814, roughness: 0.75 }));
+  doorFrame.position.set(0, 1.12, -5.48); missionRoot.add(doorFrame);
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.55),
+    new THREE.MeshStandardMaterial({ color: 0x1a1815, roughness: 0.85 }));
+  canopy.position.set(0, 2.25, -5.2); missionRoot.add(canopy);
 
-  // Street lamp
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 4.5, 8),
-    new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 }));
-  post.position.set(-3.5, 2.25, 1.5); missionRoot.add(post);
-
-  const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.3),
-    new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffcc44, emissiveIntensity: 1 }));
-  lampHead.position.set(-3.5, 4.6, 1.5); missionRoot.add(lampHead);
-
-  const streetLight = new THREE.PointLight(0xffcc44, 8, 10, 2);
-  streetLight.position.set(-3.5, 4.4, 1.5);
+  // ── Street lamp (stronger, with bracket arm) ───────────
+  const postMat2 = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.55, metalness: 0.4 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, 5.0, 8), postMat2);
+  post.position.set(-3.5, 2.5, 1.5); missionRoot.add(post);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), postMat2);
+  arm.rotation.z = Math.PI / 2; arm.position.set(-3.0, 5.0, 1.5); missionRoot.add(arm);
+  const lampShade = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.35),
+    new THREE.MeshStandardMaterial({ color: 0x1e1e1e, emissive: 0xffcc44, emissiveIntensity: 1.2 }));
+  lampShade.position.set(-2.5, 5.0, 1.5); missionRoot.add(lampShade);
+  // Main beam (strong, tight radius)
+  const streetLight = new THREE.PointLight(0xffdd66, 20, 14, 1.5);
+  streetLight.position.set(-2.5, 4.8, 1.5);
+  streetLight.castShadow = !isMobile;
+  if (!isMobile) streetLight.shadow.mapSize.set(512, 512);
   missionRoot.add(streetLight);
+  // Soft wide fill from lamp
+  const streetFill = new THREE.PointLight(0xffcc44, 6, 22, 2);
+  streetFill.position.set(-2.5, 4.8, 1.5);
+  missionRoot.add(streetFill);
 
-  // Black car
+  // ── Black sedan car (detailed) ─────────────────────────
   carGroup = new THREE.Group();
   carGroup.position.set(-1, 0, 2);
   missionRoot.add(carGroup);
 
-  const blackMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.3, metalness: 0.6 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.6 });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
-  const rimMat   = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.3, metalness: 0.8 });
+  const L = 3.8, W = 1.75, GND = 0.15, WR = 0.32;
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.65, 1.0), blackMat);
-  body.position.y = 0.55; body.castShadow = true; carGroup.add(body);
+  const bodyMat  = new THREE.MeshStandardMaterial({ color: 0x0d0d12, roughness: 0.22, metalness: 0.72 });
+  const bodyLow  = new THREE.MeshStandardMaterial({ color: 0x090910, roughness: 0.40, metalness: 0.45 });
+  const glassM   = new THREE.MeshStandardMaterial({ color: 0x0e1c2c, roughness: 0.05, metalness: 0.10, transparent: true, opacity: 0.55 });
+  const headMat  = new THREE.MeshStandardMaterial({ color: 0xeeeeff, emissive: 0xffeedd, emissiveIntensity: 0.30, roughness: 0.1 });
+  const tailMat  = new THREE.MeshStandardMaterial({ color: 0x440000, emissive: 0xff1500, emissiveIntensity: 0.50, roughness: 0.2, transparent: true, opacity: 0.90 });
+  const bumpMat  = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.75, metalness: 0.10 });
+  const chrMat   = new THREE.MeshStandardMaterial({ color: 0x909090, roughness: 0.04, metalness: 1.00 });
+  const whlMat   = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.90 });
+  const rimM     = new THREE.MeshStandardMaterial({ color: 0x7a7a7a, roughness: 0.12, metalness: 0.95 });
 
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.48, 0.92), blackMat);
-  roof.position.set(-0.1, 1.03, 0); roof.castShadow = true; carGroup.add(roof);
+  // Helper: add mesh to carGroup with optional Z-rotation
+  const cb = (geo, mat, x, y, z, rz = 0) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z); if (rz) m.rotation.z = rz;
+    m.castShadow = true; m.receiveShadow = true; carGroup.add(m); return m;
+  };
 
-  const wsFront = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.38, 0.04), glassMat);
-  wsFront.position.set(0.5, 1.0, 0.45); wsFront.rotation.x = 0.2; carGroup.add(wsFront);
+  // Lower body (full car length/width, door sill area)
+  cb(new THREE.BoxGeometry(L, 0.50, W), bodyLow, 0, GND + 0.25, 0);
 
-  const wsRear = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.04), glassMat);
-  wsRear.position.set(-0.55, 1.0, -0.45); wsRear.rotation.x = -0.2; carGroup.add(wsRear);
+  // Cabin (passenger cell, narrower, sits on lower body)
+  const CAB_L = 2.10, CAB_H = 0.62, CAB_X = -0.10;
+  cb(new THREE.BoxGeometry(CAB_L, CAB_H, W - 0.04), bodyMat, CAB_X, GND + 0.50 + CAB_H / 2, 0);
 
-  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.2, 14);
-  const rimGeo   = new THREE.CylinderGeometry(0.14, 0.14, 0.22, 10);
-  [[0.7, 0, 0.52], [0.7, 0, -0.52], [-0.7, 0, 0.52], [-0.7, 0, -0.52]].forEach(([x, y, z]) => {
-    const wh = new THREE.Mesh(wheelGeo, wheelMat);
-    wh.rotation.z = Math.PI / 2; wh.position.set(x, 0.28, z); carGroup.add(wh);
-    const ri = new THREE.Mesh(rimGeo, rimMat);
-    ri.rotation.z = Math.PI / 2; ri.position.set(x, 0.28, z); carGroup.add(ri);
+  // Roof cap
+  cb(new THREE.BoxGeometry(CAB_L - 0.18, 0.055, W - 0.10), bodyMat, CAB_X, GND + 0.50 + CAB_H, 0);
+
+  // Hood and trunk flat sections
+  const HOOD_L = L / 2 - CAB_L / 2 - 0.02;
+  cb(new THREE.BoxGeometry(HOOD_L, 0.045, W - 0.02), bodyMat,
+     CAB_X + CAB_L / 2 + HOOD_L / 2 + 0.02, GND + 0.505, 0);
+  const TRUNK_L = L / 2 - CAB_L / 2 - 0.02;
+  cb(new THREE.BoxGeometry(TRUNK_L, 0.045, W - 0.02), bodyMat,
+     CAB_X - CAB_L / 2 - TRUNK_L / 2 - 0.02, GND + 0.505, 0);
+
+  // Front windshield (angled)
+  { const dX = 0.36, dY = CAB_H * 0.96;
+    const h = Math.sqrt(dX * dX + dY * dY), ang = Math.PI / 2 - Math.atan2(dY, dX);
+    cb(new THREE.BoxGeometry(0.05, h, W - 0.10), glassM,
+       CAB_X + CAB_L / 2 - dX / 2, GND + 0.52 + dY / 2, 0, -ang); }
+
+  // Rear windshield (angled opposite)
+  { const dX = 0.30, dY = CAB_H * 0.88;
+    const h = Math.sqrt(dX * dX + dY * dY), ang = Math.PI / 2 - Math.atan2(dY, dX);
+    cb(new THREE.BoxGeometry(0.05, h, W - 0.10), glassM,
+       CAB_X - CAB_L / 2 + dX / 2, GND + 0.52 + dY / 2, 0, ang); }
+
+  // Side windows (front + rear door, both sides)
+  [-(W - 0.04) / 2 - 0.01, (W - 0.04) / 2 + 0.01].forEach(swz => {
+    cb(new THREE.BoxGeometry(0.76, CAB_H - 0.14, 0.04), glassM,
+       CAB_X + 0.22, GND + 0.52 + 0.07 + (CAB_H - 0.14) / 2, swz);
+    cb(new THREE.BoxGeometry(0.52, CAB_H - 0.20, 0.04), glassM,
+       CAB_X - 0.36, GND + 0.52 + 0.09 + (CAB_H - 0.20) / 2, swz);
   });
 
+  // Bumpers + chrome trim strips
+  cb(new THREE.BoxGeometry(0.11, 0.25, W + 0.04), bumpMat,  L / 2 + 0.055, GND + 0.22, 0);
+  cb(new THREE.BoxGeometry(0.04, 0.04, W - 0.36), chrMat,   L / 2 + 0.02,  GND + 0.39, 0);
+  cb(new THREE.BoxGeometry(0.11, 0.21, W + 0.04), bumpMat, -L / 2 - 0.055, GND + 0.20, 0);
+  cb(new THREE.BoxGeometry(0.04, 0.04, W - 0.36), chrMat,  -L / 2 - 0.02,  GND + 0.35, 0);
+
+  // Front grille
+  cb(new THREE.BoxGeometry(0.06, 0.18, W - 0.68), bodyLow, L / 2 + 0.03, GND + 0.28, 0);
+
+  // Headlights (emissive white) and taillights (emissive red)
+  [-0.52, 0.52].forEach(lz => {
+    cb(new THREE.BoxGeometry(0.05, 0.11, 0.40), headMat,  L / 2 + 0.025, GND + 0.44, lz);
+    cb(new THREE.BoxGeometry(0.05, 0.15, 0.36), tailMat, -L / 2 - 0.025, GND + 0.42, lz);
+  });
+
+  // Side mirrors
+  [W * 0.48, -W * 0.48].forEach(mz => {
+    cb(new THREE.BoxGeometry(0.14, 0.09, 0.05), bodyMat,
+       CAB_X + CAB_L / 2 - 0.27, GND + 0.52 + CAB_H - 0.07, mz);
+  });
+
+  // Wheels — per-wheel Group (tire + rim + hub + 3 spokes)
+  const AX = 1.15, WZ = W / 2 + 0.06;
+  const tirGeo = new THREE.CylinderGeometry(WR, WR, 0.22, 16);
+  const rimGeo = new THREE.CylinderGeometry(WR * 0.62, WR * 0.62, 0.23, 12);
+  const hubGeo = new THREE.CylinderGeometry(WR * 0.12, WR * 0.12, 0.24, 8);
+  const spkGeo = new THREE.BoxGeometry(WR * 1.95, 0.06, 0.21);
+
+  [[AX, WZ], [AX, -WZ], [-AX, WZ], [-AX, -WZ]].forEach(([cwx, cwz]) => {
+    const wg = new THREE.Group();
+    wg.position.set(cwx, WR, cwz);
+    wg.rotation.z = Math.PI / 2;
+    [[tirGeo, whlMat], [rimGeo, rimM], [hubGeo, chrMat]].forEach(([g, m]) => {
+      const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; wg.add(mesh);
+    });
+    for (let i = 0; i < 3; i++) {
+      const sp = new THREE.Mesh(spkGeo, rimM);
+      sp.rotation.y = (i / 3) * Math.PI; wg.add(sp);
+    }
+    carGroup.add(wg);
+  });
+
+  // Green glow on hover (intensity set by setCurrentTarget)
   carGlowLight = new THREE.PointLight(0x00ff88, 0, 4, 2);
-  carGlowLight.position.set(0, 1, 0);
+  carGlowLight.position.set(0, 1.0, 0);
   carGroup.add(carGlowLight);
 
   registerInteractive(carGroup, 'car', isMobile ? 'Взаимодействовать' : 'E — Взаимодействовать с машиной');
   buildRaycastTargets();
 
   missionCollidersList = [
-    { minX: -3.0, maxX: 1.0, minZ: 1.2, maxZ: 3.0 },  // car
-    { minX: -4.0, maxX: 4.0, minZ: -10,  maxZ: -5.4 }, // house
+    { minX: -3.1, maxX: 1.1, minZ: 0.90, maxZ: 3.10 }, // car (L=3.8 + bumpers, W=1.75 + tires)
+    { minX: -4.2, maxX: 4.2, minZ: -11,   maxZ: -5.4 }, // house
   ];
   missionRoot.visible = false;
 }
@@ -1335,14 +1455,15 @@ async function startMission() {
   isSitting = false;
 
   hubSceneNodes.forEach(o => { o.visible = false; });
-  scene.background = new THREE.Color(0x0a0d14);
+  scene.background = new THREE.Color(0x18202e);
+  scene.fog = new THREE.Fog(0x18202e, 9, 34);
   missionRoot.visible = true;
 
   colliders.length = 0;
   missionCollidersList.forEach(c => colliders.push(c));
   roomBounds = { minX: -12, maxX: 12, minZ: -12, maxZ: 12 };
 
-  playerRig.position.set(1.5, CFG.playerHeight, 3.5);
+  playerRig.position.set(2.2, CFG.playerHeight, 5.0);
   playerRig.rotation.y = Math.PI;
   camera.rotation.x = 0;
 
@@ -1372,6 +1493,7 @@ async function endMission() {
   missionRoot.visible = false;
   hubSceneNodes.forEach(o => { o.visible = true; });
   scene.background = null;
+  scene.fog = null;
 
   colliders.length = 0;
   hubColliders.forEach(c => colliders.push(c));
@@ -1404,7 +1526,8 @@ document.getElementById('btn-end-mission').addEventListener('click', endMission)
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {
   flashlightOn = !flashlightOn;
-  flashlight.intensity = flashlightOn ? 90 : 0;
+  flashlight.intensity     = flashlightOn ? 100 : 0;
+  flashlightFill.intensity = flashlightOn ? 28  : 0;
   fpLensMat.emissiveIntensity = flashlightOn ? 2 : 0;
   document.getElementById('btn-flashlight').classList.toggle('on', flashlightOn);
   const handShouldBeVisible = gameState === STATE.EXPLORING || gameState === STATE.MISSION;

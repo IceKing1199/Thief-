@@ -257,6 +257,46 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   letter-spacing: 1px; transition: all 0.2s; min-width: 240px; text-align: center;
 }
 .car-btn:hover { background: rgba(0,255,136,0.12); border-color: #00ff88; }
+
+/* ── Lockpick mini-game overlay ─────────────────────────── */
+#lockpick-overlay {
+  position: fixed; inset: 0; z-index: 310;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.92); font-family: 'Courier New', monospace;
+}
+.lp-title { color: #00ff88; font-size: 18px; letter-spacing: 4px; margin-bottom: 28px; text-transform: uppercase; }
+#lp-pins  { display: flex; gap: 20px; align-items: flex-end; }
+.lp-pin-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.lp-track {
+  width: 32px; height: 140px; background: #0a0a0a; border: 1px solid #2a2a2a;
+  border-radius: 4px; position: relative; overflow: hidden;
+}
+.lp-zone  { position: absolute; bottom: 91px; height: 42px; width: 100%; background: rgba(0,255,136,0.2); border-top: 1px solid rgba(0,255,136,0.4); border-bottom: 1px solid rgba(0,255,136,0.4); }
+.lp-head  {
+  position: absolute; width: 28px; height: 14px;
+  background: #888; border-radius: 3px; left: 2px;
+  transition: background 0.08s;
+}
+.lp-head.set { background: #00ff88; box-shadow: 0 0 6px rgba(0,255,136,0.8); }
+.lp-pick-btn {
+  width: 56px; height: 36px; background: #0d1f0d; border: 1px solid #00ff88;
+  color: #00ff88; font-family: 'Courier New'; cursor: pointer; border-radius: 4px; font-size: 18px;
+  transition: background 0.1s;
+}
+.lp-pick-btn:active { background: rgba(0,255,136,0.3); }
+.lp-pick-btn.set { background: #001a00; border-color: #006633; color: #006633; pointer-events: none; }
+.lp-hint  { color: #334; font-size: 12px; margin-top: 24px; letter-spacing: 1px; }
+#lp-cancel {
+  margin-top: 16px; background: none; border: 1px solid #2a2a2a; color: #334;
+  font-family: 'Courier New'; padding: 7px 20px; cursor: pointer; border-radius: 4px;
+  font-size: 12px; letter-spacing: 1px; transition: all 0.2s;
+}
+#lp-cancel:hover { border-color: #555; color: #667; }
+@keyframes lp-shake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-8px); }
+  40%,80%  { transform: translateX(8px); }
+}
 </style>
 </head>
 
@@ -320,6 +360,14 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
 <div id="car-menu" style="display:none">
   <button class="car-btn" id="btn-resume-mission">Вернуться к миссии</button>
   <button class="car-btn" id="btn-end-mission">Завершить миссию</button>
+</div>
+
+<!-- Lockpick mini-game overlay -->
+<div id="lockpick-overlay">
+  <div class="lp-title">⚙ Вскрытие замка</div>
+  <div id="lp-pins"></div>
+  <div class="lp-hint">Нажмите ▼ когда штырёк в зелёной зоне</div>
+  <button id="lp-cancel" onclick="closeLockpick()">✕ Отмена</button>
 </div>
 
 <!-- Mobile controls -->
@@ -992,8 +1040,9 @@ function setCurrentTarget(entry) {
     interactionPrompt.style.opacity = '0';
     btnInteract.classList.remove('active');
   }
-  if (typeof carGlowLight !== 'undefined')
-    carGlowLight.intensity = (entry?.tag === 'car') ? 2.5 : 0;
+  for (const [tag, light] of glowLightRegistry) {
+    light.intensity = (entry?.tag === tag) ? 2.5 : 0;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1275,16 +1324,23 @@ function buildMissionScene() {
     });
   });
 
-  // Door with frame and canopy
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.15, 0.06),
+  // Door group (interactive — lockpick target)
+  const doorGroup = new THREE.Group();
+  doorGroup.position.set(0, 0, -5.51);
+  missionRoot.add(doorGroup);
+  const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.15, 0.06),
     new THREE.MeshStandardMaterial({ color: 0x161008, roughness: 0.82 }));
-  door.position.set(0, 1.075, -5.51); missionRoot.add(door);
-  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.12, 2.24, 0.10),
+  doorMesh.position.set(0, 1.075, 0); doorGroup.add(doorMesh);
+  const doorFrameMesh = new THREE.Mesh(new THREE.BoxGeometry(1.12, 2.24, 0.10),
     new THREE.MeshStandardMaterial({ color: 0x1c1814, roughness: 0.75 }));
-  doorFrame.position.set(0, 1.12, -5.48); missionRoot.add(doorFrame);
-  const canopy = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.55),
+  doorFrameMesh.position.set(0, 1.12, 0.03); doorGroup.add(doorFrameMesh);
+  const canopyMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.55),
     new THREE.MeshStandardMaterial({ color: 0x1a1815, roughness: 0.85 }));
-  canopy.position.set(0, 2.25, -5.2); missionRoot.add(canopy);
+  canopyMesh.position.set(0, 2.25, 0.31); doorGroup.add(canopyMesh);
+  const doorGlow = new THREE.PointLight(0x00ff88, 0, 3, 2);
+  doorGlow.position.set(0, 1.5, 0.3); doorGroup.add(doorGlow);
+  glowLightRegistry.set('door', doorGlow);
+  registerInteractive(doorGroup, 'door', isMobile ? 'Взломать замок' : 'E — Взломать замок');
 
   // ── Street lamp (stronger, with bracket arm) ───────────
   const postMat2 = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.55, metalness: 0.4 });
@@ -1414,6 +1470,7 @@ function buildMissionScene() {
   carGlowLight = new THREE.PointLight(0x00ff88, 0, 4, 2);
   carGlowLight.position.set(0, 1.0, 0);
   carGroup.add(carGlowLight);
+  glowLightRegistry.set('car', carGlowLight);
 
   registerInteractive(carGroup, 'car', isMobile ? 'Взаимодействовать' : 'E — Взаимодействовать с машиной');
   buildRaycastTargets();
@@ -1422,13 +1479,494 @@ function buildMissionScene() {
     { minX: -3.1, maxX: 1.1, minZ: 0.90, maxZ: 3.10 }, // car (L=3.8 + bumpers, W=1.75 + tires)
     { minX: -4.2, maxX: 4.2, minZ: -11,   maxZ: -5.4 }, // house
   ];
+
+  buildHouseInterior();
   missionRoot.visible = false;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 10b — House Interior Builder
+═══════════════════════════════════════════════════════════ */
+
+function buildHouseInterior() {
+  const O = HOUSE_OFFSET; // 200 — far past fog (18 m)
+  const GH = 3.2;  // ground floor ceiling height
+  const SH = 4.0;  // second-floor Y offset (floor level)
+
+  // ── Materials ───────────────────────────────────────────
+  const wallMat  = new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.88 });
+  const wallMat2 = new THREE.MeshStandardMaterial({ color: 0x22201e, roughness: 0.85 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1510, roughness: 0.75 });
+  const ceilMat  = new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.9 });
+  const woodMat  = new THREE.MeshStandardMaterial({ color: 0x3a2810, roughness: 0.7 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.3, metalness: 0.8 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0e1c2c, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.4 });
+  const tvScreenM = new THREE.MeshStandardMaterial({ color: 0x000810, emissive: 0x002244, emissiveIntensity: 0.4, roughness: 0.05 });
+  const screenGlowM = new THREE.MeshStandardMaterial({ color: 0x001122, emissive: 0x1133ff, emissiveIntensity: 0.6 });
+  const couchMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 });
+  const counterMat = new THREE.MeshStandardMaterial({ color: 0x282420, roughness: 0.65 });
+  const valueMat = new THREE.MeshStandardMaterial({ color: 0xccaa44, roughness: 0.1, metalness: 0.95 });
+  const gemMat   = new THREE.MeshStandardMaterial({ color: 0xff3399, roughness: 0.02, metalness: 0.3 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.7 });
+  const plasticM = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
+  const kidMat   = new THREE.MeshStandardMaterial({ color: 0x1a3a5a, roughness: 0.8 });
+  const bookMat  = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.85 });
+
+  // ── Helper: box mesh added to missionRoot ───────────────
+  const B = (w, h, d, x, y, z, mat) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(O + x, y, z);
+    m.receiveShadow = true; m.castShadow = true;
+    missionRoot.add(m); return m;
+  };
+
+  // ═══════════════════════════════════════════════════════
+  // GROUND FLOOR  (Y 0..GH)
+  // Layout (X rel to O):  W: -8..+8, Z: -7..+3
+  //   Entry hall:    Xr -2..+2, Z 0..+3
+  //   Living room:   Xr -8..+1, Z -7..0
+  //   Kitchen:       Xr +1..+8, Z -7..0
+  //   Bathroom GF:   Xr +4..+8, Z 0..+4
+  //   Under-stairs:  Xr -8..-4, Z 0..+4
+  // ═══════════════════════════════════════════════════════
+
+  // Floor & ceiling
+  B(16, 0.12, 11, 0, 0,    -2, floorMat); // ground floor slab
+  B(16, 0.12, 11, 0, GH,   -2, ceilMat);  // ground floor ceiling
+
+  // Outer walls (ground floor)
+  B(0.2, GH, 11, -8, GH/2, -2, wallMat);  // west wall
+  B(0.2, GH, 11,  8, GH/2, -2, wallMat);  // east wall
+  B(16, GH, 0.2,  0, GH/2, -7.1, wallMat); // south wall
+  B(16, GH, 0.2,  0, GH/2,  3.1, wallMat); // north wall (with door gap)
+
+  // Interior partition walls (ground floor)
+  B(9, GH, 0.15,  -3.5, GH/2, 0, wallMat2); // living↔hall south (with gap for entry)
+  B(7, GH, 0.15,   4.5, GH/2, 0, wallMat2); // kitchen↔bath south
+  B(0.15, GH, 4,    1, GH/2, -3.5, wallMat2); // living↔kitchen divider
+  B(0.15, GH, 4,    4, GH/2,  2, wallMat2);  // bath partition
+
+  // ── Living room furniture ───────────────────────────────
+  // Couch (large L-shape)
+  B(3.5, 0.5, 1.0, -4, 0.25, -2.5, couchMat); // seat
+  B(3.5, 0.8, 0.3, -4, 0.65, -3.0, couchMat); // back
+  B(0.3, 0.8, 1.0, -5.5, 0.65, -2.5, couchMat); // arm L
+  B(0.3, 0.8, 1.0, -2.5, 0.65, -2.5, couchMat); // arm R
+  // Coffee table
+  B(1.2, 0.05, 0.7, -4, 0.5, -1.6, woodMat);
+  B(0.05, 0.5, 0.05, -4.5, 0.25, -1.25, woodMat); // leg
+  B(0.05, 0.5, 0.05, -3.5, 0.25, -1.25, woodMat);
+  B(0.05, 0.5, 0.05, -4.5, 0.25, -1.95, woodMat);
+  B(0.05, 0.5, 0.05, -3.5, 0.25, -1.95, woodMat);
+  // TV stand + TV
+  B(1.5, 0.5, 0.4, -6.5, 0.25, -5.5, woodMat); // stand
+  B(1.4, 0.05, 0.3, -6.5, 0.52, -5.5, woodMat);
+  B(1.3, 0.75, 0.06, -6.5, 1.0, -5.7, plasticM);  // TV frame
+  B(1.15, 0.62, 0.04, -6.5, 1.0, -5.68, tvScreenM); // screen
+  // Shelf unit on west wall
+  B(0.12, 2.0, 1.2, -7.8, 1.0, -4, woodMat); // shelf back
+  B(1.2, 0.06, 0.3, -7.2, 0.5, -4, woodMat);
+  B(1.2, 0.06, 0.3, -7.2, 1.1, -4, woodMat);
+  B(1.2, 0.06, 0.3, -7.2, 1.7, -4, woodMat);
+  // Small console box on shelf
+  B(0.35, 0.12, 0.25, -7.1, 0.57, -4, plasticM);
+  // Bookcase (east side of living room)
+  B(0.12, 2.0, 1.5, 0.7, 1.0, -5, woodMat);
+  B(1.5, 0.06, 0.3, 0.1, 0.6, -5, woodMat);
+  B(1.5, 0.06, 0.3, 0.1, 1.2, -5, woodMat);
+  B(1.5, 0.06, 0.3, 0.1, 1.8, -5, woodMat);
+  // Books
+  for (let bk = 0; bk < 5; bk++) {
+    B(0.07, 0.25, 0.22, -0.25 + bk*0.18, 0.73, -5, bookMat);
+    B(0.07, 0.22, 0.22, -0.25 + bk*0.18, 1.33, -5, new THREE.MeshStandardMaterial({ color: 0x1a2a3a, roughness: 0.85 }));
+  }
+
+  // ── Kitchen furniture ────────────────────────────────────
+  // Counter along south wall
+  B(7, 0.9, 0.6, 4.5, 0.45, -6.7, counterMat);
+  B(7, 0.05, 0.65, 4.5, 0.9, -6.7, whiteMat); // counter top
+  // Counter along east wall
+  B(0.6, 0.9, 6, 7.7, 0.45, -3.5, counterMat);
+  B(0.65, 0.05, 6, 7.7, 0.9, -3.5, whiteMat);
+  // Sink
+  B(0.8, 0.08, 0.5, 6.5, 0.92, -6.7, metalMat);
+  B(0.65, 0.06, 0.38, 6.5, 0.96, -6.7, glassMat);
+  // Stove
+  B(0.7, 0.04, 0.5, 4.5, 0.92, -6.7, metalMat);
+  // Kitchen table
+  B(1.4, 0.06, 0.9, 3.5, 0.8, -4.5, woodMat);
+  B(0.06, 0.8, 0.06, 2.85, 0.4, -4.1, woodMat);
+  B(0.06, 0.8, 0.06, 4.15, 0.4, -4.1, woodMat);
+  B(0.06, 0.8, 0.06, 2.85, 0.4, -4.9, woodMat);
+  B(0.06, 0.8, 0.06, 4.15, 0.4, -4.9, woodMat);
+  // Chairs
+  B(0.55, 0.05, 0.5, 2.4, 0.45, -4.5, woodMat);
+  B(0.55, 0.5, 0.06, 2.4, 0.7, -4.7, woodMat);
+  B(0.55, 0.05, 0.5, 4.6, 0.45, -4.5, woodMat);
+  B(0.55, 0.5, 0.06, 4.6, 0.7, -4.7, woodMat);
+
+  // ── Staircase (ground floor half) ───────────────────────
+  for (let s = 0; s < 8; s++) {
+    B(1.8, 0.12, 0.45, -5.5, s * 0.5 + 0.12, s * 0.45 + 0.22, woodMat);
+  }
+  // Stair railings
+  B(0.06, SH + 0.2, 0.06, -4.65, SH/2, -1.8, metalMat);
+  B(0.06, SH + 0.2, 0.06, -6.35, SH/2, -1.8, metalMat);
+
+  // ── Bathroom (GF) ───────────────────────────────────────
+  // Toilet
+  B(0.45, 0.35, 0.6, 6.5, 0.18, 2.5, whiteMat);
+  B(0.45, 0.06, 0.6, 6.5, 0.37, 2.5, whiteMat);
+  B(0.45, 0.5, 0.1, 6.5, 0.43, 2.2, whiteMat); // tank
+  // Bathtub
+  B(1.5, 0.35, 0.7, 5.5, 0.18, 0.8, whiteMat);
+  B(1.5, 0.08, 0.7, 5.5, 0.4, 0.8, glassMat); // water surface
+
+  // Under-stairs closet (no furniture, just walls)
+  B(0.12, SH, 4, -7.9, SH/2, 2, wallMat2);
+  B(4, SH, 0.12, -6, SH/2, 4, wallMat2);
+
+  // ── Ground floor lighting ────────────────────────────────
+  const glLivingRoom = new THREE.PointLight(0xffeedd, 6, 12, 1.5);
+  glLivingRoom.position.set(O - 3.5, GH - 0.2, -3.5); missionRoot.add(glLivingRoom);
+  const glKitchen = new THREE.PointLight(0xfff0dd, 5, 10, 1.5);
+  glKitchen.position.set(O + 4.5, GH - 0.2, -3.5); missionRoot.add(glKitchen);
+
+  // ══════════════════════════════════════════════════════
+  // SECOND FLOOR (Y = SH)
+  //   Landing:        Xr -2..+2, Z 0..+3
+  //   Bedroom:        Xr -8..0,  Z 0..+4
+  //   2nd Bathroom:   Xr 0..+8,  Z 0..+4
+  //   Children's rm:  Xr -8..0,  Z -7..0
+  //   Office:         Xr 0..+8,  Z -7..0
+  // ══════════════════════════════════════════════════════
+
+  const FY = SH; // floor Y for second floor
+
+  // Floor & ceiling (second floor)
+  B(16, 0.12, 11, 0, FY, -2, floorMat);
+  B(16, 0.12, 11, 0, FY + GH, -2, ceilMat);
+
+  // Outer walls (second floor)
+  B(0.2, GH, 11, -8, FY + GH/2, -2, wallMat);
+  B(0.2, GH, 11,  8, FY + GH/2, -2, wallMat);
+  B(16, GH, 0.2,  0, FY + GH/2, -7.1, wallMat);
+  B(16, GH, 0.2,  0, FY + GH/2,  3.1, wallMat);
+
+  // Interior partitions (second floor)
+  B(8, GH, 0.15, -4, FY + GH/2, 0, wallMat2);  // bedroom↔landing south
+  B(8, GH, 0.15,  4, FY + GH/2, 0, wallMat2);  // bath2↔landing south
+  B(0.15, GH, 7.1,  0, FY + GH/2, -3.5, wallMat2); // bedroom↔children divider
+
+  // Staircase (second floor half — open landing)
+  for (let s = 0; s < 8; s++) {
+    B(1.8, 0.12, 0.45, -5.5, FY + s * 0.5 + 0.12, -(s * 0.45) - 0.22 + 3.76, woodMat);
+  }
+
+  // ── Bedroom ──────────────────────────────────────────────
+  // Bed
+  B(1.8, 0.35, 2.2, -5.5, FY + 0.18, 2, woodMat); // base
+  B(1.8, 0.5, 2.2, -5.5, FY + 0.53, 2, new THREE.MeshStandardMaterial({ color: 0x3a3050, roughness: 0.9 })); // mattress
+  B(1.8, 0.6, 0.2, -5.5, FY + 0.85, 3.0, woodMat); // headboard
+  // Wardrobe
+  B(0.5, 2.0, 1.8, -7.6, FY + 1.0, 0.8, woodMat);
+  B(0.06, 1.9, 1.7, -7.3, FY + 1.0, 0.8, woodMat); // door
+  // Dresser
+  B(1.2, 0.8, 0.5, -3.5, FY + 0.4, 3.2, woodMat);
+  // Bedside table
+  B(0.45, 0.55, 0.4, -6.5, FY + 0.28, 1.3, woodMat);
+  B(0.45, 0.55, 0.4, -4.5, FY + 0.28, 1.3, woodMat);
+  // Vanity mirror
+  B(0.06, 1.0, 0.7, -7.7, FY + 1.3, 3.2, metalMat);
+  B(0.04, 0.85, 0.55, -7.65, FY + 1.3, 3.2, glassMat);
+
+  // ── Second bathroom ──────────────────────────────────────
+  B(0.45, 0.35, 0.6, 6.5, FY + 0.18, 2.5, whiteMat);
+  B(0.45, 0.06, 0.6, 6.5, FY + 0.37, 2.5, whiteMat);
+  B(0.45, 0.5, 0.1, 6.5, FY + 0.43, 2.2, whiteMat);
+  B(1.2, 0.35, 0.6, 5.0, FY + 0.18, 2.5, whiteMat); // shower tray
+
+  // ── Children's room ──────────────────────────────────────
+  // Bunk bed
+  B(0.9, 0.2, 1.8, -6, FY + 0.1, -4.5, kidMat);   // lower bunk
+  B(0.9, 0.2, 1.8, -6, FY + 1.1, -4.5, kidMat);   // upper bunk
+  B(0.06, 1.3, 0.06, -6.4, FY + 0.65, -3.65, woodMat); // post FL
+  B(0.06, 1.3, 0.06, -5.6, FY + 0.65, -3.65, woodMat);
+  B(0.06, 1.3, 0.06, -6.4, FY + 0.65, -5.35, woodMat);
+  B(0.06, 1.3, 0.06, -5.6, FY + 0.65, -5.35, woodMat);
+  // Small desk
+  B(0.9, 0.05, 0.55, -3, FY + 0.7, -6.5, woodMat);
+  B(0.06, 0.7, 0.06, -3.4, FY + 0.35, -6.25, woodMat);
+  B(0.06, 0.7, 0.06, -2.6, FY + 0.35, -6.25, woodMat);
+  // Toy box
+  B(0.8, 0.4, 0.5, -7, FY + 0.2, -6.5, kidMat);
+
+  // ── Office ───────────────────────────────────────────────
+  // Desk
+  B(2.0, 0.06, 0.8, 5, FY + 0.76, -6.2, woodMat);
+  B(0.06, 0.76, 0.06, 4.1, FY + 0.38, -5.85, woodMat);
+  B(0.06, 0.76, 0.06, 5.9, FY + 0.38, -5.85, woodMat);
+  B(0.06, 0.76, 0.06, 4.1, FY + 0.38, -6.55, woodMat);
+  B(0.06, 0.76, 0.06, 5.9, FY + 0.38, -6.55, woodMat);
+  // Office chair
+  B(0.55, 0.05, 0.5, 5, FY + 0.45, -5.2, woodMat);
+  B(0.55, 0.6, 0.06, 5, FY + 0.75, -5.45, woodMat);
+  // Bookshelf
+  B(0.12, 2.0, 1.5, 7.8, FY + 1.0, -4.5, woodMat);
+  B(1.5, 0.06, 0.3, 7.2, FY + 0.5, -4.5, woodMat);
+  B(1.5, 0.06, 0.3, 7.2, FY + 1.1, -4.5, woodMat);
+  B(1.5, 0.06, 0.3, 7.2, FY + 1.7, -4.5, woodMat);
+  for (let bk = 0; bk < 4; bk++) {
+    B(0.09, 0.28, 0.22, 7.5 - bk*0.2, FY + 0.64, -4.5, bookMat);
+    B(0.09, 0.24, 0.22, 7.5 - bk*0.2, FY + 1.24, -4.5, new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.85 }));
+  }
+
+  // ── Second floor lighting ────────────────────────────────
+  const sfBedroom = new THREE.PointLight(0xffeedd, 4.5, 10, 1.5);
+  sfBedroom.position.set(O - 4, FY + GH - 0.2, 2); missionRoot.add(sfBedroom);
+  const sfKids = new THREE.PointLight(0xeef0ff, 4, 10, 1.5);
+  sfKids.position.set(O - 4, FY + GH - 0.2, -3.5); missionRoot.add(sfKids);
+  const sfOffice = new THREE.PointLight(0xddeeff, 4.5, 10, 1.5);
+  sfOffice.position.set(O + 5, FY + GH - 0.2, -3.5); missionRoot.add(sfOffice);
+
+  // ══════════════════════════════════════════════════════
+  // EXIT DOOR (inside, near entry)
+  // ══════════════════════════════════════════════════════
+  const exitDoorGroup = new THREE.Group();
+  exitDoorGroup.position.set(O, 0, 2.9);
+  missionRoot.add(exitDoorGroup);
+  const exitDM = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 0.8 }));
+  exitDM.position.set(0, 1.05, 0); exitDoorGroup.add(exitDM);
+  const exitLabel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.12, 0.02),
+    new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x00ff44, emissiveIntensity: 0.8 })
+  );
+  exitLabel.position.set(0, 1.6, 0.05); exitDoorGroup.add(exitLabel);
+  const exitGlow = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
+  exitGlow.position.set(0, 1.5, 0.2); exitDoorGroup.add(exitGlow);
+  glowLightRegistry.set('exit_door', exitGlow);
+  registerInteractive(exitDoorGroup, 'exit_door', isMobile ? 'Выйти из дома' : 'E — Выйти из дома');
+
+  // ══════════════════════════════════════════════════════
+  // STAIRCASE INTERACTIVE
+  // ══════════════════════════════════════════════════════
+  const stairGroup = new THREE.Group();
+  stairGroup.position.set(O - 5.5, 0, 0.3);
+  missionRoot.add(stairGroup);
+  const stairSign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.7 }));
+  stairSign.position.set(0, 1.4, 0); stairGroup.add(stairSign);
+  const stairArrow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x006622, emissive: 0x00ff44, emissiveIntensity: 1.0 }));
+  stairArrow.position.set(0, 1.58, 0.05); stairGroup.add(stairArrow);
+  const stairGlow = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
+  stairGlow.position.set(0, 1.5, 0.3); stairGroup.add(stairGlow);
+  glowLightRegistry.set('stairs', stairGlow);
+  registerInteractive(stairGroup, 'stairs', isMobile ? 'Подняться' : 'E — Подняться');
+
+  // ══════════════════════════════════════════════════════
+  // COLLECTIBLES — helper
+  // ══════════════════════════════════════════════════════
+  const addCollectible = (tag, value, label, x, y, z, buildFn) => {
+    const g = new THREE.Group();
+    g.position.set(O + x, y, z);
+    buildFn(g);
+    const gl = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
+    gl.position.set(0, 0.5, 0.2); g.add(gl);
+    glowLightRegistry.set(tag, gl);
+    missionRoot.add(g);
+    activeCollectibles.set(tag, { group: g, value });
+    const lbl = isMobile ? `Забрать (${value.toLocaleString()}$)` : `E — Забрать (${value.toLocaleString()}$)`;
+    registerInteractive(g, tag, lbl);
+  };
+
+  // ── Visible collectibles (ground floor) ─────────────────
+  // TV in living room (on stand)
+  addCollectible('collect_tv', 500, 'Телевизор', -6.5, 0.58, -5.65, g => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.06), plasticM);
+    f.position.set(0, 0, 0); g.add(f);
+    const s = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.62, 0.04), tvScreenM);
+    s.position.set(0, 0, 0.02); g.add(s);
+  });
+
+  // Game console on shelf
+  addCollectible('collect_console', 300, 'Игровая консоль', -7.1, 0.57, -4.0, g => {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.25), plasticM);
+    g.add(c);
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x002200, emissive: 0x00ff22, emissiveIntensity: 1 }));
+    l.position.set(0.12, 0.05, 0); g.add(l);
+  });
+
+  // Jewelry on coffee table
+  addCollectible('collect_jewelry1', 800, 'Украшения', -4.0, 0.58, -1.6, g => {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.16),
+      new THREE.MeshStandardMaterial({ color: 0x1a0808, roughness: 0.6 }));
+    g.add(box);
+    const gem = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), gemMat);
+    gem.position.set(0, 0.08, 0); g.add(gem);
+  });
+
+  // Coffee maker in kitchen
+  addCollectible('collect_coffeemaker', 150, 'Кофемашина', 5.5, 0.96, -6.5, g => {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 0.18), whiteMat);
+    g.add(body);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.14), metalMat);
+    top.position.set(0, 0.19, 0); g.add(top);
+    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6),
+      new THREE.MeshStandardMaterial({ color: 0x004400, emissive: 0x00aa44, emissiveIntensity: 0.8 }));
+    btn.position.set(0.06, 0.02, 0.09); g.add(btn);
+  });
+
+  // Laptop on kitchen table
+  addCollectible('collect_laptop', 600, 'Ноутбук', 3.5, 0.84, -4.4, g => {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.36), plasticM);
+    g.add(base);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.36, 0.025), plasticM);
+    lid.position.set(0, 0.18, -0.165); lid.rotation.x = -0.95; g.add(lid);
+    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.32, 0.01), screenGlowM);
+    screen.position.copy(lid.position); screen.position.z -= 0.01; screen.rotation.x = lid.rotation.x; g.add(screen);
+  });
+
+  // ── Visible collectibles (second floor) ──────────────────
+  // Watches on bedroom dresser
+  addCollectible('collect_watches', 1200, 'Часы', -3.5, FY + 0.82, 3.2, g => {
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.04, 8), woodMat);
+    g.add(stand);
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, 12), valueMat);
+    face.position.y = 0.03; g.add(face);
+  });
+
+  // Necklace on bedroom dresser
+  addCollectible('collect_jewelry2', 900, 'Ожерелье', -3.0, FY + 0.82, 3.25, g => {
+    for (let i = 0; i < 8; i++) {
+      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.018, 5, 5), valueMat);
+      bead.position.set(Math.cos(i * Math.PI / 4) * 0.06, 0, Math.sin(i * Math.PI / 4) * 0.06);
+      g.add(bead);
+    }
+  });
+
+  // PC setup on office desk
+  addCollectible('collect_pc', 1200, 'Компьютер', 5.0, FY + 0.8, -6.2, g => {
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.35), plasticM);
+    tower.position.set(-0.55, 0.25, 0.05); g.add(tower);
+    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.38, 0.04), plasticM);
+    monitor.position.set(0.15, 0.22, 0); g.add(monitor);
+    const mscreen = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.02), screenGlowM);
+    mscreen.position.set(0.15, 0.22, 0.03); g.add(mscreen);
+  });
+
+  // Tablet on office desk
+  addCollectible('collect_tablet', 400, 'Планшет', 4.2, FY + 0.78, -5.9, g => {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.015), plasticM);
+    g.add(t);
+    const ts = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.01), screenGlowM);
+    ts.position.z = 0.01; g.add(ts);
+  });
+
+  // Phone in children's room
+  addCollectible('collect_phone', 350, 'Смартфон', -3.0, FY + 0.72, -6.4, g => {
+    const ph = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.175, 0.012), plasticM);
+    g.add(ph);
+    const ps = new THREE.Mesh(new THREE.BoxGeometry(0.077, 0.155, 0.008),
+      new THREE.MeshStandardMaterial({ color: 0x001122, emissive: 0x1144aa, emissiveIntensity: 0.5 }));
+    ps.position.z = 0.01; g.add(ps);
+  });
+
+  // Camera on bedroom shelf
+  addCollectible('collect_camera', 600, 'Фотоаппарат', -4.3, FY + 0.82, 3.25, g => {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.1), plasticM);
+    g.add(body);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 8), metalMat);
+    lens.rotation.x = Math.PI / 2; lens.position.set(0, 0, -0.08); g.add(lens);
+  });
+
+  // Ring in bedroom
+  addCollectible('collect_ring', 1500, 'Кольцо с бриллиантом', -4.8, FY + 0.29, 1.4, g => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), valueMat);
+    ring.rotation.x = Math.PI / 2; g.add(ring);
+    const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.02), gemMat);
+    diamond.position.y = 0.03; g.add(diamond);
+  });
+
+  // ── HIDDEN STASHES ────────────────────────────────────────
+  // Cash under couch (very small, tucked under)
+  addCollectible('collect_stash_couch', 200, '💰 Наличные', -4.0, 0.04, -3.0, g => {
+    const env = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a00, roughness: 0.9 }));
+    g.add(env);
+    g.scale.setScalar(0.6);
+  });
+
+  // Cash packet in kitchen cabinet (behind counter, needs to look behind)
+  addCollectible('collect_stash_kitchen', 350, '💰 Пакет с деньгами', 7.5, 0.5, -6.3, g => {
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0x1a3300, roughness: 0.9 }));
+    g.add(bag);
+    g.scale.setScalar(0.55);
+  });
+
+  // Safe hidden behind wardrobe on second floor
+  addCollectible('collect_stash_safe', 3000, '🔒 Сейф', -7.0, FY + 0.4, 0.8, g => {
+    const safe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.35), metalMat);
+    g.add(safe);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.46, 0.04), metalMat);
+    door.position.set(0, 0, 0.195); g.add(door);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03),
+      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.1, metalness: 1 }));
+    handle.position.set(0.1, 0, 0.22); g.add(handle);
+    g.scale.setScalar(0.7);
+  });
+
+  // Piggy bank in children's closet
+  addCollectible('collect_stash_piggy', 500, '🐷 Копилка', -7.2, FY + 0.42, -6.5, g => {
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6),
+      new THREE.MeshStandardMaterial({ color: 0xff88aa, roughness: 0.7 }));
+    g.add(body);
+    const snout = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4),
+      new THREE.MeshStandardMaterial({ color: 0xff99bb, roughness: 0.6 }));
+    snout.position.set(0, -0.01, 0.09); g.add(snout);
+    g.scale.setScalar(0.7);
+  });
+
+  // Money in book on office shelf
+  addCollectible('collect_stash_book', 250, '💵 Деньги в книге', 7.3, FY + 0.65, -4.5, g => {
+    const book = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.22),
+      new THREE.MeshStandardMaterial({ color: 0x0a1a0a, roughness: 0.85 }));
+    g.add(book);
+    g.scale.setScalar(0.65);
+  });
+
+  // ── Interior colliders (outer boundary walls) ────────────
+  interiorColliders = [
+    { minX: HOUSE_OFFSET + 7.7,  maxX: HOUSE_OFFSET + 20, minZ: -8, maxZ: 5 },  // east wall
+    { minX: HOUSE_OFFSET - 20,   maxX: HOUSE_OFFSET - 7.7, minZ: -8, maxZ: 5 }, // west wall
+    { minX: HOUSE_OFFSET - 9,    maxX: HOUSE_OFFSET + 9, minZ: -7.3, maxZ: -20 }, // south wall
+    { minX: HOUSE_OFFSET - 9,    maxX: HOUSE_OFFSET + 9, minZ:  3.3, maxZ: 20 }, // north wall
+  ];
+
+  buildRaycastTargets();
 }
 
 // Mission runtime state
 let missionActive = false;
 let missionTimeSec = 180, missionMoney = 0, missionStashFound = false;
 let missionTimerHandle = null;
+
+// House interior state
+let doorUnlocked  = false;
+let insideHouse   = false;
+let currentFloor  = 0;
+const glowLightRegistry  = new Map(); // tag → PointLight
+const activeCollectibles = new Map(); // tag → { group, value }
+const collectedItems     = new Set();
+let lockpickInterval = null;
+const pinStates = Array.from({length:5}, (_,i) => ({
+  y: 0, dir: 1, speed: 0.38 + i * 0.09, set: false
+}));
+let interiorColliders = [];
+const HOUSE_OFFSET = 200;
 
 function startMissionTimer() {
   missionTimerHandle = setInterval(() => {
@@ -1492,6 +2030,12 @@ async function endMission() {
   scene.background = null;
   scene.fog = null;
 
+  doorUnlocked = false;
+  insideHouse  = false;
+  currentFloor = 0;
+  collectedItems.clear();
+  activeCollectibles.forEach(info => { info.group.visible = true; });
+
   colliders.length = 0;
   hubColliders.forEach(c => colliders.push(c));
   roomBounds = { minX: -4.5, maxX: 4.5, minZ: -4.5, maxZ: 4.5 };
@@ -1520,6 +2064,151 @@ document.getElementById('btn-resume-mission').addEventListener('click', () => {
 });
 document.getElementById('btn-end-mission').addEventListener('click', endMission);
 
+// ── Door handler ────────────────────────────────────────────
+function handleDoor() {
+  if (insideHouse) return;
+  if (doorUnlocked) { enterHouse(); return; }
+  startLockpick();
+}
+
+// ── Lockpick mini-game ──────────────────────────────────────
+function startLockpick() {
+  pinStates.forEach(p => { p.y = 0; p.dir = 1; p.set = false; });
+  const container = document.getElementById('lp-pins');
+  container.innerHTML = '';
+  pinStates.forEach((_, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'lp-pin-wrap';
+    wrap.innerHTML = `<div class="lp-track">
+      <div class="lp-zone"></div>
+      <div class="lp-head" id="lp-head-${i}" style="bottom:0px"></div>
+    </div>`;
+    const btn = document.createElement('button');
+    btn.className = 'lp-pick-btn';
+    btn.id = `lp-btn-${i}`;
+    btn.textContent = '▼';
+    btn.addEventListener('click', () => pickPin(i));
+    wrap.appendChild(btn);
+    container.appendChild(wrap);
+  });
+  document.getElementById('lockpick-overlay').style.display = 'flex';
+  if (document.pointerLockElement) document.exitPointerLock();
+  gameState = STATE.MENU;
+  clearInterval(lockpickInterval);
+  lockpickInterval = setInterval(animateLockpick, 16);
+}
+
+function animateLockpick() {
+  pinStates.forEach((p, i) => {
+    if (p.set) return;
+    p.y += p.dir * p.speed * 0.016;
+    if (p.y >= 1) { p.y = 1; p.dir = -1; }
+    if (p.y <= 0) { p.y = 0; p.dir =  1; }
+    const el = document.getElementById(`lp-head-${i}`);
+    if (el) el.style.bottom = Math.round(p.y * 114) + 'px';
+  });
+}
+
+function pickPin(i) {
+  const p = pinStates[i];
+  if (p.set) return;
+  if (p.y >= 0.65) {
+    p.set = true;
+    document.getElementById(`lp-btn-${i}`)?.classList.add('set');
+    document.getElementById(`lp-head-${i}`)?.classList.add('set');
+    if (pinStates.every(ps => ps.set)) onLockSuccess();
+  } else {
+    pinStates.forEach(ps => { if (!ps.set) { ps.y = 0; ps.dir = 1; } });
+    const c = document.getElementById('lp-pins');
+    c.style.animation = 'lp-shake 0.3s';
+    setTimeout(() => { c.style.animation = ''; }, 320);
+  }
+}
+
+function onLockSuccess() {
+  clearInterval(lockpickInterval); lockpickInterval = null;
+  doorUnlocked = true;
+  document.getElementById('lockpick-overlay').style.display = 'none';
+  interactiveRegistry.forEach(entry => {
+    if (entry.tag === 'door')
+      entry.label = isMobile ? 'Войти' : 'E — Войти в дом';
+  });
+  gameState = STATE.MISSION;
+  if (!isMobile) canvas.requestPointerLock();
+  setTimeout(() => enterHouse(), 350);
+}
+
+function closeLockpick() {
+  clearInterval(lockpickInterval); lockpickInterval = null;
+  document.getElementById('lockpick-overlay').style.display = 'none';
+  gameState = STATE.MISSION;
+  if (!isMobile) canvas.requestPointerLock();
+}
+window.closeLockpick = closeLockpick;
+
+// ── Zone transitions ────────────────────────────────────────
+async function enterHouse() {
+  if (insideHouse) return;
+  await fadeOut(400);
+  insideHouse = true; currentFloor = 0;
+  colliders.length = 0;
+  interiorColliders.forEach(c => colliders.push(c));
+  roomBounds = { minX: HOUSE_OFFSET - 9, maxX: HOUSE_OFFSET + 9, minZ: -8, maxZ: 4 };
+  playerRig.position.set(HOUSE_OFFSET, CFG.playerHeight, 2.0);
+  playerRig.rotation.y = Math.PI;
+  camera.rotation.x = 0;
+  await fadeIn(400);
+}
+
+async function exitHouse() {
+  if (!insideHouse) return;
+  await fadeOut(400);
+  insideHouse = false; currentFloor = 0;
+  colliders.length = 0;
+  missionCollidersList.forEach(c => colliders.push(c));
+  roomBounds = { minX: -12, maxX: 12, minZ: -12, maxZ: 12 };
+  playerRig.position.set(0, CFG.playerHeight, -4.0);
+  playerRig.rotation.y = 0;
+  camera.rotation.x = 0;
+  await fadeIn(400);
+}
+
+// ── Staircase handler ───────────────────────────────────────
+function handleStairs() {
+  if (currentFloor === 0) {
+    currentFloor = 1;
+    playerRig.position.set(HOUSE_OFFSET - 1, 4 + CFG.playerHeight, -1.5);
+  } else {
+    currentFloor = 0;
+    playerRig.position.set(HOUSE_OFFSET - 1, CFG.playerHeight, 0.5);
+  }
+  interactiveRegistry.forEach(entry => {
+    if (entry.tag === 'stairs')
+      entry.label = currentFloor === 1
+        ? (isMobile ? 'Спуститься' : 'E — Спуститься')
+        : (isMobile ? 'Подняться'  : 'E — Подняться');
+  });
+  camera.rotation.x = 0;
+}
+
+// ── Collect handler ─────────────────────────────────────────
+function handleCollect(tag) {
+  if (collectedItems.has(tag)) return;
+  const info = activeCollectibles.get(tag);
+  if (!info) return;
+  collectedItems.add(tag);
+  info.group.visible = false;
+  missionMoney += info.value;
+  document.getElementById('hud-money').textContent =
+    `${missionMoney.toLocaleString()}$ / 20 000$`;
+  setCurrentTarget(null);
+  const ov = document.getElementById('fade-overlay');
+  ov.style.background = 'rgba(0,255,136,0.12)';
+  ov.style.opacity = '1';
+  setTimeout(() => { ov.style.opacity = '0';
+    setTimeout(() => { ov.style.background = '#000'; }, 260); }, 190);
+}
+
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {
   flashlightOn = !flashlightOn;
@@ -1537,6 +2226,10 @@ function interact() {
   if (currentTarget.tag === 'chair')    handleChair();
   if (currentTarget.tag === 'computer') handleComputer();
   if (currentTarget.tag === 'car')      handleCar();
+  if (currentTarget.tag === 'door')     handleDoor();
+  if (currentTarget.tag === 'exit_door') exitHouse();
+  if (currentTarget.tag === 'stairs')   handleStairs();
+  if (currentTarget.tag.startsWith('collect_')) handleCollect(currentTarget.tag);
 }
 
 /* ═══════════════════════════════════════════════════════════

@@ -220,6 +220,43 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
 @media (orientation: landscape) and (pointer: coarse) {
   #menu-scroll { gap: 14px; padding: 12px 16px; }
 }
+
+/* ── Fade overlay ───────────────────────────────────────── */
+#fade-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: #000; opacity: 0; pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+/* ── Mission HUD (notepad style) ────────────────────────── */
+#mission-hud {
+  position: fixed; top: 18px; left: 18px; z-index: 25;
+  background: #f5f0e0; border: 1px solid #c8b88a; border-radius: 4px;
+  padding: 10px 14px 12px; min-width: 160px;
+  box-shadow: 2px 3px 10px rgba(0,0,0,0.5);
+  font-family: 'Courier New', monospace; color: #1a1a0a;
+}
+.hud-title {
+  font-size: 11px; font-weight: bold; letter-spacing: 1px;
+  border-bottom: 1px solid #c8b88a; margin-bottom: 8px; padding-bottom: 4px; color: #3a2a0a;
+}
+.hud-row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+.hud-lbl { font-size: 10px; color: #6a5a3a; letter-spacing: 0.5px; }
+.hud-val { font-size: 10px; color: #1a1a0a; font-weight: bold; }
+
+/* ── Car interaction menu ───────────────────────────────── */
+#car-menu {
+  position: fixed; inset: 0; z-index: 150;
+  flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(0,0,0,0.7);
+}
+.car-btn {
+  background: rgba(0,0,0,0.8); border: 1px solid rgba(0,255,136,0.4);
+  color: #00ff88; font-family: 'Courier New', monospace; font-size: 14px;
+  padding: 12px 32px; border-radius: 6px; cursor: pointer;
+  letter-spacing: 1px; transition: all 0.2s; min-width: 240px; text-align: center;
+}
+.car-btn:hover { background: rgba(0,255,136,0.12); border-color: #00ff88; }
 </style>
 </head>
 
@@ -268,6 +305,23 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   </div>
 </div>
 
+<!-- Fade overlay (mission transitions) -->
+<div id="fade-overlay"></div>
+
+<!-- Mission HUD notepad -->
+<div id="mission-hud" style="display:none">
+  <div class="hud-title">📋 ЗАДАНИЕ</div>
+  <div class="hud-row"><span class="hud-lbl">ВРЕМЯ</span><span id="hud-timer" class="hud-val">03:00</span></div>
+  <div class="hud-row"><span class="hud-lbl">ДЕНЬГИ</span><span id="hud-money" class="hud-val">0$ / 20 000$</span></div>
+  <div class="hud-row"><span class="hud-lbl">ТАЙНИК</span><span id="hud-stash" class="hud-val">❌</span></div>
+</div>
+
+<!-- Car interaction menu -->
+<div id="car-menu" style="display:none">
+  <button class="car-btn" id="btn-resume-mission">Вернуться к миссии</button>
+  <button class="car-btn" id="btn-end-mission">Завершить миссию</button>
+</div>
+
 <!-- Mobile controls -->
 <div id="mobile-ui">
   <div id="joystick-zone">
@@ -303,7 +357,8 @@ const CFG = {
   handBobAmt:      0.012,
 };
 
-const STATE = { EXPLORING: 'EXPLORING', SITTING: 'SITTING', MENU: 'MENU' };
+const STATE = { EXPLORING: 'EXPLORING', SITTING: 'SITTING', MENU: 'MENU',
+                MISSION: 'MISSION', CAR_MENU: 'CAR_MENU' };
 
 /* ═══════════════════════════════════════════════════════════
    SECTION 2 — Scene Setup
@@ -711,7 +766,7 @@ const canvas = renderer.domElement;
 const lockOverlay = document.getElementById('pointer-lock-overlay');
 
 function requestLock() {
-  if (gameState === STATE.MENU) return;
+  if (gameState === STATE.MENU || gameState === STATE.CAR_MENU) return;
   if (isMobile) { lockOverlay.style.display = 'none'; return; }
   canvas.requestPointerLock();
 }
@@ -721,11 +776,12 @@ canvas.addEventListener('click', () => { if (!isPointerLocked && gameState !== S
 document.addEventListener('pointerlockchange', () => {
   if (isMobile) return;
   isPointerLocked = document.pointerLockElement === canvas;
-  lockOverlay.style.display = (isPointerLocked || gameState === STATE.MENU) ? 'none' : 'flex';
+  const inMenu = gameState === STATE.MENU || gameState === STATE.MISSION || gameState === STATE.CAR_MENU;
+  lockOverlay.style.display = (isPointerLocked || inMenu) ? 'none' : 'flex';
 });
 
 document.addEventListener('mousemove', e => {
-  if (!isPointerLocked || gameState === STATE.MENU || tweenState.active) return;
+  if (!isPointerLocked || gameState === STATE.MENU || gameState === STATE.CAR_MENU || tweenState.active) return;
   playerRig.rotation.y -= e.movementX * CFG.lookSensitivity;
   camera.rotation.x = clamp(camera.rotation.x - e.movementY * CFG.lookSensitivity, -Math.PI / 2.1, Math.PI / 2.1);
 });
@@ -815,7 +871,7 @@ function isTouchOnMobileUI(x, y) {
 document.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
     if (isTouchOnMobileUI(t.clientX, t.clientY)) continue;
-    if (t.clientX > window.innerWidth * 0.38 && gameState !== STATE.MENU) {
+    if (t.clientX > window.innerWidth * 0.38 && gameState !== STATE.MENU && gameState !== STATE.CAR_MENU) {
       e.preventDefault();
       lookTouchId = t.identifier;
       lookLast = { x: t.clientX, y: t.clientY };
@@ -826,7 +882,7 @@ document.addEventListener('touchstart', e => {
 document.addEventListener('touchmove', e => {
   if (lookTouchId !== null) e.preventDefault();
   for (const t of e.changedTouches) {
-    if (t.identifier !== lookTouchId || gameState === STATE.MENU || tweenState.active) continue;
+    if (t.identifier !== lookTouchId || gameState === STATE.MENU || gameState === STATE.CAR_MENU || tweenState.active) continue;
     const dx = t.clientX - lookLast.x;
     const dy = t.clientY - lookLast.y;
     playerRig.rotation.y -= dx * CFG.touchLookSens;
@@ -869,20 +925,27 @@ registerInteractive(chairGroup,    'chair',    isMobile ? 'Use Computer' : 'E �
 // Computer is still independently interactive when standing at the desk
 registerInteractive(computerGroup, 'computer', isMobile ? 'Use Computer' : 'E — Use Computer');
 
-// Pre-build raycaster target list ONCE — no per-frame traversal/allocation
+// Pre-build raycaster target list — called initially and after new interactives are registered
 const SCREEN_CENTER = { x: 0, y: 0 };
 let raycastTargets = [];
-(function buildRaycastTargets() {
+function buildRaycastTargets() {
+  raycastTargets.length = 0;
   const seen = new Set();
   for (const entry of interactiveRegistry.values()) {
     entry.mesh.traverse(o => {
       if (o.isMesh && !seen.has(o.uuid)) { seen.add(o.uuid); raycastTargets.push(o); }
     });
   }
-})();
+}
+buildRaycastTargets();
 
 // Merge static geometry now that interactive objects are known
 mergeStaticScene();
+
+// Hub snapshot — captured once at startup for scene swapping
+const hubSceneNodes = scene.children.filter(o => o !== playerRig);
+const hubColliders  = [...colliders];
+let   roomBounds    = { minX: -4.5, maxX: 4.5, minZ: -4.5, maxZ: 4.5 };
 
 const raycaster = new THREE.Raycaster();
 
@@ -892,9 +955,12 @@ function updateInteractionSystem() {
     return;
   }
 
-  raycaster.setFromCamera(SCREEN_CENTER, camera); // no {} allocation each frame
+  raycaster.setFromCamera(SCREEN_CENTER, camera);
 
-  const hits = raycaster.intersectObjects(raycastTargets, false); // pre-built list
+  const visTargets = raycastTargets.filter(o => {
+    let c = o; while (c) { if (!c.visible) return false; c = c.parent; } return true;
+  });
+  const hits = raycaster.intersectObjects(visTargets, false);
 
   if (hits.length > 0 && hits[0].distance < CFG.interactDist) {
     // Walk up parent chain to find registered entry
@@ -920,6 +986,8 @@ function setCurrentTarget(entry) {
     interactionPrompt.style.opacity = '0';
     btnInteract.classList.remove('active');
   }
+  if (typeof carGlowLight !== 'undefined')
+    carGlowLight.intensity = (entry?.tag === 'car') ? 2.5 : 0;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1108,8 +1176,230 @@ document.getElementById('btn-accept').addEventListener('click', () => {
   const btn = document.getElementById('btn-accept');
   btn.className = 'email-btn accept-active';
   btn.textContent = '[ ✓ ПРИНЯТО — ЗАГРУЗКА... ]';
-  setTimeout(() => { closeEmailModal(); alert('Загрузка ограбления...'); }, 900);
+  setTimeout(() => { closeEmailModal(); startMission(); }, 900);
 });
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION MISSION — House Robbery
+═══════════════════════════════════════════════════════════ */
+
+// Fade helpers
+const fadeOverlay = document.getElementById('fade-overlay');
+function fadeOut(ms = 800) {
+  return new Promise(r => {
+    fadeOverlay.style.transition = `opacity ${ms}ms ease`;
+    fadeOverlay.style.opacity = '1';
+    fadeOverlay.style.pointerEvents = 'auto';
+    setTimeout(r, ms);
+  });
+}
+function fadeIn(ms = 800) {
+  return new Promise(r => {
+    fadeOverlay.style.transition = `opacity ${ms}ms ease`;
+    fadeOverlay.style.opacity = '0';
+    setTimeout(() => { fadeOverlay.style.pointerEvents = 'none'; r(); }, ms);
+  });
+}
+
+// Synthesized car-stop engine sound
+function playCarStopSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, ctx.currentTime + 1.8);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 2.0);
+  } catch(e) {}
+}
+
+// Mission scene objects (built once on first launch)
+let missionBuilt = false;
+let missionRoot, carGroup, carGlowLight, missionCollidersList;
+
+function buildMissionScene() {
+  if (missionBuilt) return;
+  missionBuilt = true;
+  missionRoot = new THREE.Group();
+  scene.add(missionRoot);
+
+  missionRoot.add(new THREE.AmbientLight(0x223355, 0.6));
+
+  // Asphalt ground
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40),
+    new THREE.MeshStandardMaterial({ color: 0x111214, roughness: 0.95 }));
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+  missionRoot.add(ground);
+
+  // House exterior
+  const houseMat = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.9 });
+  const house = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 5), houseMat);
+  house.position.set(0, 2.5, -8); house.castShadow = true; house.receiveShadow = true;
+  missionRoot.add(house);
+
+  const winMat = new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0x221800, emissiveIntensity: 0.5 });
+  [[-1.8, 3, -5.51], [1.8, 3, -5.51]].forEach(([x, y, z]) => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.05), winMat);
+    w.position.set(x, y, z); missionRoot.add(w);
+  });
+
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.8 }));
+  door.position.set(0, 1.05, -5.51); missionRoot.add(door);
+
+  // Street lamp
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 4.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6 }));
+  post.position.set(-3.5, 2.25, 1.5); missionRoot.add(post);
+
+  const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.3),
+    new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffcc44, emissiveIntensity: 1 }));
+  lampHead.position.set(-3.5, 4.6, 1.5); missionRoot.add(lampHead);
+
+  const streetLight = new THREE.PointLight(0xffcc44, 8, 10, 2);
+  streetLight.position.set(-3.5, 4.4, 1.5);
+  missionRoot.add(streetLight);
+
+  // Black car
+  carGroup = new THREE.Group();
+  carGroup.position.set(-1, 0, 2);
+  missionRoot.add(carGroup);
+
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.3, metalness: 0.6 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.6 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+  const rimMat   = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.3, metalness: 0.8 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.65, 1.0), blackMat);
+  body.position.y = 0.55; body.castShadow = true; carGroup.add(body);
+
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.48, 0.92), blackMat);
+  roof.position.set(-0.1, 1.03, 0); roof.castShadow = true; carGroup.add(roof);
+
+  const wsFront = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.38, 0.04), glassMat);
+  wsFront.position.set(0.5, 1.0, 0.45); wsFront.rotation.x = 0.2; carGroup.add(wsFront);
+
+  const wsRear = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.04), glassMat);
+  wsRear.position.set(-0.55, 1.0, -0.45); wsRear.rotation.x = -0.2; carGroup.add(wsRear);
+
+  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.2, 14);
+  const rimGeo   = new THREE.CylinderGeometry(0.14, 0.14, 0.22, 10);
+  [[0.7, 0, 0.52], [0.7, 0, -0.52], [-0.7, 0, 0.52], [-0.7, 0, -0.52]].forEach(([x, y, z]) => {
+    const wh = new THREE.Mesh(wheelGeo, wheelMat);
+    wh.rotation.z = Math.PI / 2; wh.position.set(x, 0.28, z); carGroup.add(wh);
+    const ri = new THREE.Mesh(rimGeo, rimMat);
+    ri.rotation.z = Math.PI / 2; ri.position.set(x, 0.28, z); carGroup.add(ri);
+  });
+
+  carGlowLight = new THREE.PointLight(0x00ff88, 0, 4, 2);
+  carGlowLight.position.set(0, 1, 0);
+  carGroup.add(carGlowLight);
+
+  registerInteractive(carGroup, 'car', isMobile ? 'Взаимодействовать' : 'E — Взаимодействовать с машиной');
+  buildRaycastTargets();
+
+  missionCollidersList = [
+    { minX: -3.0, maxX: 1.0, minZ: 1.2, maxZ: 3.0 },  // car
+    { minX: -4.0, maxX: 4.0, minZ: -10,  maxZ: -5.4 }, // house
+  ];
+  missionRoot.visible = false;
+}
+
+// Mission runtime state
+let missionActive = false;
+let missionTimeSec = 180, missionMoney = 0, missionStashFound = false;
+let missionTimerHandle = null;
+
+function startMissionTimer() {
+  missionTimerHandle = setInterval(() => {
+    if (!missionActive) return;
+    missionTimeSec = Math.max(0, missionTimeSec - 1);
+    const m = String(Math.floor(missionTimeSec / 60)).padStart(2, '0');
+    const s = String(missionTimeSec % 60).padStart(2, '0');
+    document.getElementById('hud-timer').textContent = `${m}:${s}`;
+    if (missionTimeSec <= 0) endMission();
+  }, 1000);
+}
+function stopMissionTimer() { clearInterval(missionTimerHandle); missionTimerHandle = null; }
+
+async function startMission() {
+  playCarStopSound();
+  await new Promise(r => setTimeout(r, 1800));
+  await fadeOut(700);
+
+  buildMissionScene();
+  document.getElementById('computer-menu').style.display = 'none';
+  isSitting = false;
+
+  hubSceneNodes.forEach(o => { o.visible = false; });
+  scene.background = new THREE.Color(0x0a0d14);
+  missionRoot.visible = true;
+
+  colliders.length = 0;
+  missionCollidersList.forEach(c => colliders.push(c));
+  roomBounds = { minX: -12, maxX: 12, minZ: -12, maxZ: 12 };
+
+  playerRig.position.set(1.5, CFG.playerHeight, 3.5);
+  playerRig.rotation.y = Math.PI;
+  camera.rotation.x = 0;
+
+  gameState = STATE.MISSION;
+  missionActive = true;
+  missionTimeSec = 180; missionMoney = 0; missionStashFound = false;
+
+  await fadeIn(700);
+
+  document.getElementById('mission-hud').style.display = 'block';
+  document.getElementById('hud-timer').textContent = '03:00';
+  document.getElementById('hud-money').textContent = '0$ / 20 000$';
+  document.getElementById('hud-stash').textContent = '❌';
+  startMissionTimer();
+  setHandVisible(true);
+  if (!isMobile) canvas.requestPointerLock();
+}
+
+async function endMission() {
+  stopMissionTimer();
+  missionActive = false;
+  document.getElementById('car-menu').style.display = 'none';
+  document.getElementById('mission-hud').style.display = 'none';
+
+  await fadeOut(700);
+
+  missionRoot.visible = false;
+  hubSceneNodes.forEach(o => { o.visible = true; });
+  scene.background = null;
+
+  colliders.length = 0;
+  hubColliders.forEach(c => colliders.push(c));
+  roomBounds = { minX: -4.5, maxX: 4.5, minZ: -4.5, maxZ: 4.5 };
+
+  playerRig.position.set(0, CFG.playerHeight, 2.0);
+  playerRig.rotation.y = 0;
+  camera.rotation.x = 0;
+  gameState = STATE.EXPLORING;
+
+  await fadeIn(700);
+  setHandVisible(true);
+  if (!isMobile) canvas.requestPointerLock();
+}
+
+function handleCar() {
+  if (tweenState.active) return;
+  gameState = STATE.CAR_MENU;
+  setHandVisible(false);
+  document.getElementById('car-menu').style.display = 'flex';
+}
+
+document.getElementById('btn-resume-mission').addEventListener('click', () => {
+  document.getElementById('car-menu').style.display = 'none';
+  gameState = STATE.MISSION;
+  setHandVisible(true);
+});
+document.getElementById('btn-end-mission').addEventListener('click', endMission);
 
 // ── Flashlight toggle ───────────────────────────────────────
 function toggleFlashlight() {
@@ -1117,7 +1407,7 @@ function toggleFlashlight() {
   flashlight.intensity = flashlightOn ? 90 : 0;
   fpLensMat.emissiveIntensity = flashlightOn ? 2 : 0;
   document.getElementById('btn-flashlight').classList.toggle('on', flashlightOn);
-  const handShouldBeVisible = gameState === STATE.EXPLORING;
+  const handShouldBeVisible = gameState === STATE.EXPLORING || gameState === STATE.MISSION;
   setHandVisible(handShouldBeVisible);
 }
 
@@ -1126,6 +1416,7 @@ function interact() {
   if (!currentTarget || currentTarget.cooldown) return;
   if (currentTarget.tag === 'chair')    handleChair();
   if (currentTarget.tag === 'computer') handleComputer();
+  if (currentTarget.tag === 'car')      handleCar();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1141,7 +1432,7 @@ const handBaseY = -0.28;
 const handBaseZ = 0.05;
 
 function processMovement(delta) {
-  if (gameState !== STATE.EXPLORING || tweenState.active) return;
+  if ((gameState !== STATE.EXPLORING && gameState !== STATE.MISSION) || tweenState.active) return;
 
   const yaw  = playerRig.rotation.y;
   const fwdX = -Math.sin(yaw);
@@ -1192,13 +1483,13 @@ function processMovement(delta) {
       }
     }
 
-    playerRig.position.x = clamp(nx, -4.5, 4.5);
-    playerRig.position.z = clamp(nz, -4.5, 4.5);
+    playerRig.position.x = clamp(nx, roomBounds.minX, roomBounds.maxX);
+    playerRig.position.z = clamp(nz, roomBounds.minZ, roomBounds.maxZ);
   }
 }
 
 function updateHandBob(delta) {
-  if (isMoving && gameState === STATE.EXPLORING) {
+  if (isMoving && (gameState === STATE.EXPLORING || gameState === STATE.MISSION)) {
     handBobTime += delta * CFG.handBobSpeed;
   }
   handGroup.position.y  = handBaseY + Math.sin(handBobTime) * CFG.handBobAmt;
@@ -1212,11 +1503,8 @@ function animate() {
   processMovement(delta);
   processTween(delta);
 
-  if (gameState !== STATE.MENU) {
+  if (gameState === STATE.EXPLORING || gameState === STATE.MISSION) {
     updateInteractionSystem();
-  }
-
-  if (gameState === STATE.EXPLORING) {
     updateHandBob(delta);
   }
 

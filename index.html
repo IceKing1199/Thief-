@@ -61,10 +61,16 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
 #computer-menu {
   position: fixed; inset: 0; z-index: 100;
   display: none; flex-direction: column;
-  align-items: center; justify-content: center; gap: 28px;
+  align-items: center; justify-content: center;
   background: rgba(0,8,4,0.95);
   font-family: 'Courier New', monospace; color: #00ff88;
 }
+#menu-scroll {
+  display: flex; flex-direction: column; align-items: center; gap: 28px;
+  overflow-y: auto; width: 100%; max-height: 100vh;
+  padding: 24px 16px; box-sizing: border-box;
+}
+#menu-scroll > * { flex-shrink: 0; }
 .cm-title { font-size: clamp(13px,2.5vw,18px); letter-spacing: 4px; color: #447755; }
 #heist-map { display: flex; align-items: center; padding: 8px 20px; }
 .map-node {
@@ -212,7 +218,7 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   #btn-flashlight { bottom: max(28px, env(safe-area-inset-bottom, 0px) + 16px); }
 }
 @media (orientation: landscape) and (pointer: coarse) {
-  #computer-menu { overflow-y: auto; justify-content: flex-start; padding: 16px 0 24px; gap: 16px; }
+  #menu-scroll { gap: 14px; padding: 12px 16px; }
 }
 </style>
 </head>
@@ -254,10 +260,12 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
       </div>
     </div>
   </div>
-  <div class="cm-title">// ВЫБОР ЦЕЛИ //</div>
-  <div id="heist-map"></div>
-  <div id="heist-detail"></div>
-  <button id="btn-close-menu">[ ЗАКРЫТЬ ТЕРМИНАЛ ]</button>
+  <div id="menu-scroll">
+    <div class="cm-title">// ВЫБОР ЦЕЛИ //</div>
+    <div id="heist-map"></div>
+    <div id="heist-detail"></div>
+    <button id="btn-close-menu">[ ЗАКРЫТЬ ТЕРМИНАЛ ]</button>
+  </div>
 </div>
 
 <!-- Mobile controls -->
@@ -793,10 +801,20 @@ joystickZone.addEventListener('touchcancel', joystickEnd, { passive: false });
 let lookTouchId  = null;
 let lookLast     = { x: 0, y: 0 };
 
+function isTouchOnMobileUI(x, y) {
+  const ids = ['joystick-zone', 'btn-interact', 'btn-flashlight'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+  }
+  return false;
+}
+
 document.addEventListener('touchstart', e => {
   for (const t of e.changedTouches) {
-    const el = document.elementFromPoint(t.clientX, t.clientY);
-    if (el && el.closest('#mobile-ui')) continue; // don't hijack button taps as look-drag
+    if (isTouchOnMobileUI(t.clientX, t.clientY)) continue;
     if (t.clientX > window.innerWidth * 0.38 && gameState !== STATE.MENU) {
       e.preventDefault();
       lookTouchId = t.identifier;

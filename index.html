@@ -297,6 +297,142 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   20%,60%  { transform: translateX(-8px); }
   40%,80%  { transform: translateX(8px); }
 }
+
+/* ===== KEYPAD (safe) overlay — green terminal style ===== */
+#keypad-overlay {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  background: rgba(2,6,4,0.92); backdrop-filter: blur(3px);
+  align-items: center; justify-content: center;
+  font-family: 'Courier New', monospace;
+}
+#keypad-overlay.active { display: flex; }
+.kp-box {
+  width: 320px; max-width: 90vw; background: #06120b;
+  border: 1px solid #0c3; border-radius: 10px; padding: 26px 24px 22px;
+  box-shadow: 0 0 40px rgba(0,255,136,0.12), inset 0 0 60px rgba(0,40,20,0.5);
+}
+.kp-title { color: #00ff88; font-size: 14px; letter-spacing: 2px; text-align: center; margin-bottom: 4px; }
+.kp-sub   { color: #2f7; opacity: 0.55; font-size: 11px; text-align: center; margin-bottom: 18px; letter-spacing: 1px; }
+.kp-display {
+  height: 54px; background: #020a06; border: 1px solid #084; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  color: #00ff88; font-size: 30px; letter-spacing: 10px; margin-bottom: 18px;
+  text-shadow: 0 0 8px rgba(0,255,136,0.6);
+}
+.kp-display.bad { animation: lp-shake 0.3s; border-color: #f44; color: #f66; }
+.kp-display.good { border-color: #0f8; box-shadow: 0 0 22px rgba(0,255,136,0.5); }
+.kp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.kp-key {
+  background: #08160e; border: 1px solid #0a4028; color: #4ad; border-radius: 6px;
+  font-family: 'Courier New'; font-size: 22px; padding: 14px 0; cursor: pointer;
+  transition: all 0.12s; color: #6ec79a; user-select: none;
+}
+.kp-key:hover { background: #0d2a1a; border-color: #0c6; color: #00ff88; }
+.kp-key:active { background: rgba(0,255,136,0.25); }
+.kp-key.wide { grid-column: span 1; font-size: 16px; }
+.kp-key.enter { color: #00ff88; border-color: #075; }
+#kp-cancel {
+  margin-top: 16px; width: 100%; background: none; border: 1px solid #2a2a2a; color: #456;
+  font-family: 'Courier New'; padding: 8px 0; cursor: pointer; border-radius: 4px;
+  font-size: 12px; letter-spacing: 1px; transition: all 0.2s;
+}
+#kp-cancel:hover { border-color: #555; color: #89a; }
+
+/* ===== NOTE / HINT modal — paper note style ===== */
+#note-overlay {
+  position: fixed; inset: 0; z-index: 58; display: none;
+  background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+}
+#note-overlay.active { display: flex; }
+.note-card {
+  width: 380px; max-width: 88vw; max-height: 80vh; overflow-y: auto;
+  padding: 30px 30px 26px; border-radius: 3px; position: relative;
+  transform: rotate(-1.2deg); box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  line-height: 1.55;
+}
+/* paper variant */
+.note-card.paper {
+  background: #f5f0e0; color: #2a2620; font-family: Georgia, serif; font-size: 15px;
+  background-image: linear-gradient(#f5f0e0 95%, #e3dcc4 100%);
+  border: 1px solid #d8d0b8;
+}
+.note-card.paper .note-title { font-weight: bold; font-size: 17px; margin-bottom: 12px; color: #3a3424; }
+/* kid crayon variant */
+.note-card.kid {
+  background: #fffdf5; color: #2b3a8c; font-family: 'Comic Sans MS','Marker Felt',cursive; font-size: 17px;
+  border: 2px dashed #c9b27a; transform: rotate(1.4deg);
+}
+.note-card.kid .note-title { font-size: 20px; color: #d4561b; margin-bottom: 10px; font-weight: bold; }
+/* sticky note */
+.note-card.sticky {
+  background: #fff7a8; color: #43381a; font-family: 'Comic Sans MS','Marker Felt',cursive; font-size: 16px;
+  box-shadow: 0 12px 30px rgba(120,110,40,0.45); transform: rotate(2.2deg);
+  background-image: linear-gradient(180deg,#fffbc0,#fff088);
+}
+.note-card.sticky .note-title { font-size: 17px; margin-bottom: 8px; font-weight: bold; }
+/* calendar variant */
+.note-card.calendar {
+  background: #fafafa; color: #222; font-family: Arial, sans-serif; font-size: 15px;
+  border: 1px solid #ccc; transform: rotate(0deg);
+}
+.note-card.calendar .note-title { background: #c0392b; color: #fff; margin: -30px -30px 16px; padding: 12px; text-align: center; font-size: 18px; letter-spacing: 2px; font-weight: bold; }
+/* forum / screen variant */
+.note-card.screen {
+  background: #11151c; color: #b8c4d0; font-family: 'Courier New', monospace; font-size: 14px;
+  border: 1px solid #2a3a4a; transform: rotate(0.4deg);
+}
+.note-card.screen .note-title { color: #5fb0ff; margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #243; padding-bottom: 8px; }
+.note-card.screen .note-q { color: #6c7a8a; }
+.note-body { white-space: pre-wrap; }
+.note-close {
+  margin-top: 20px; display: block; width: 100%; text-align: center;
+  background: rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.2); color: inherit;
+  font-family: inherit; padding: 9px 0; cursor: pointer; border-radius: 4px; font-size: 13px;
+  opacity: 0.8; transition: opacity 0.2s;
+}
+.note-card.screen .note-close { background: rgba(255,255,255,0.05); border-color: #2a3a4a; }
+.note-close:hover { opacity: 1; }
+.note-hl { color: #c0392b; font-weight: bold; }
+.note-card.screen .note-hl { color: #ff7b5f; }
+
+/* ===== Pickup toast ===== */
+#toast {
+  position: fixed; left: 50%; bottom: 13%; transform: translateX(-50%) translateY(20px);
+  z-index: 62; background: rgba(4,18,11,0.95); border: 1px solid #0c5;
+  color: #00ff88; font-family: 'Courier New', monospace; font-size: 15px; letter-spacing: 1px;
+  padding: 13px 26px; border-radius: 8px; opacity: 0; pointer-events: none;
+  box-shadow: 0 0 26px rgba(0,255,136,0.25); transition: opacity 0.3s, transform 0.3s; text-align: center;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== Mission report modal ===== */
+#report-overlay {
+  position: fixed; inset: 0; z-index: 64; display: none;
+  background: rgba(2,6,4,0.94); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; font-family: 'Courier New', monospace;
+}
+#report-overlay.active { display: flex; }
+.rp-box {
+  width: 440px; max-width: 90vw; background: #06120b; border: 1px solid #0c3;
+  border-radius: 10px; padding: 30px 30px 26px;
+  box-shadow: 0 0 50px rgba(0,255,136,0.12), inset 0 0 80px rgba(0,40,20,0.45);
+}
+.rp-head { color: #00ff88; font-size: 16px; letter-spacing: 2px; margin-bottom: 4px; }
+.rp-from { color: #2f7; opacity: 0.5; font-size: 11px; margin-bottom: 20px; letter-spacing: 1px; }
+.rp-line { color: #9fd8bb; font-size: 14px; margin: 9px 0; display: flex; justify-content: space-between; }
+.rp-line .v { color: #00ff88; }
+.rp-div { height: 1px; background: #0a4028; margin: 16px 0; }
+.rp-total { font-size: 17px; }
+.rp-total .v { text-shadow: 0 0 8px rgba(0,255,136,0.5); }
+.rp-badge { margin: 14px 0; padding: 12px; border-radius: 6px; font-size: 13px; text-align: center; letter-spacing: 1px; }
+.rp-badge.win { background: rgba(0,255,136,0.08); border: 1px solid #075; color: #00ff88; }
+.rp-badge.miss { background: rgba(255,180,60,0.06); border: 1px solid #640; color: #fb6; }
+#rp-btn {
+  margin-top: 18px; width: 100%; background: #08160e; border: 1px solid #0a5; color: #00ff88;
+  font-family: 'Courier New'; padding: 12px 0; cursor: pointer; border-radius: 6px;
+  font-size: 14px; letter-spacing: 2px; transition: all 0.2s;
+}
+#rp-btn:hover { background: #0d2a1a; box-shadow: 0 0 20px rgba(0,255,136,0.25); }
 </style>
 </head>
 
@@ -351,7 +487,7 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
 <!-- Mission HUD notepad -->
 <div id="mission-hud" style="display:none">
   <div class="hud-title">📋 ЗАДАНИЕ</div>
-  <div class="hud-row"><span class="hud-lbl">ВРЕМЯ</span><span id="hud-timer" class="hud-val">03:00</span></div>
+  <div class="hud-row"><span class="hud-lbl">ВРЕМЯ</span><span id="hud-timer" class="hud-val">08:00</span></div>
   <div class="hud-row"><span class="hud-lbl">ДЕНЬГИ</span><span id="hud-money" class="hud-val">0$ / 20 000$</span></div>
   <div class="hud-row"><span class="hud-lbl">ТАЙНИК</span><span id="hud-stash" class="hud-val">❌</span></div>
 </div>
@@ -368,6 +504,52 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   <div id="lp-pins"></div>
   <div class="lp-hint">Нажмите ▼ когда штырёк в зелёной зоне</div>
   <button id="lp-cancel" onclick="closeLockpick()">✕ Отмена</button>
+</div>
+
+<!-- Safe keypad overlay -->
+<div id="keypad-overlay">
+  <div class="kp-box">
+    <div class="kp-title">⚿ НАПОЛЬНЫЙ СЕЙФ</div>
+    <div class="kp-sub">ВВЕДИТЕ 4-ЗНАЧНЫЙ КОД</div>
+    <div class="kp-display" id="kp-display"></div>
+    <div class="kp-grid">
+      <button class="kp-key" data-d="1">1</button>
+      <button class="kp-key" data-d="2">2</button>
+      <button class="kp-key" data-d="3">3</button>
+      <button class="kp-key" data-d="4">4</button>
+      <button class="kp-key" data-d="5">5</button>
+      <button class="kp-key" data-d="6">6</button>
+      <button class="kp-key" data-d="7">7</button>
+      <button class="kp-key" data-d="8">8</button>
+      <button class="kp-key" data-d="9">9</button>
+      <button class="kp-key wide" id="kp-del">⌫</button>
+      <button class="kp-key" data-d="0">0</button>
+      <button class="kp-key wide enter" id="kp-enter">⏎</button>
+    </div>
+    <button id="kp-cancel" onclick="closeKeypad()">✕ Отойти</button>
+  </div>
+</div>
+
+<!-- Hint / note modal -->
+<div id="note-overlay" onclick="if(event.target===this)closeNote()">
+  <div class="note-card paper" id="note-card">
+    <div class="note-title" id="note-title"></div>
+    <div class="note-body" id="note-body"></div>
+    <button class="note-close" onclick="closeNote()">Закрыть</button>
+  </div>
+</div>
+
+<!-- Pickup toast -->
+<div id="toast"></div>
+
+<!-- Mission report modal -->
+<div id="report-overlay">
+  <div class="rp-box">
+    <div class="rp-head">▦ ОТЧЁТ ОБ ОПЕРАЦИИ</div>
+    <div class="rp-from">от: ТвояДаркнетГерл</div>
+    <div id="rp-lines"></div>
+    <button id="rp-btn" onclick="finishReport()">ВЕРНУТЬСЯ В УБЕЖИЩЕ</button>
+  </div>
 </div>
 
 <!-- Mobile controls -->
@@ -702,6 +884,30 @@ scene.add(newspaper);
 addBox(scene, 0.42, 0.04, 0.09, -4.42, 0.02, 3.62, mat(0x111111, 0.8, 0.1));
 addBox(scene, 0.02, 0.008, 0.55, -4.46, 0.004, 3.85, mat(0x0f0f0f, 0.95, 0), false);
 
+// ── Hub decor: wall clock (back wall) ────────────────────────
+addBox(scene, 0.46, 0.46, 0.04, -1.6, 2.3, -4.93, mat(0x161616, 0.7, 0.15), false);
+addBox(scene, 0.38, 0.38, 0.02, -1.6, 2.3, -4.90, mat(0x2a2a22, 0.6, 0.1), false);
+const clockHandH = addBox(scene, 0.02, 0.14, 0.01, -1.6, 2.35, -4.88, mat(0x00ff88, 0.4, 0.2, { emissive: 0x004422 }), false);
+clockHandH.rotation.z = 0.5;
+const clockHandM = addBox(scene, 0.02, 0.18, 0.01, -1.6, 2.31, -4.88, mat(0xaaaaaa, 0.4, 0.2), false);
+clockHandM.rotation.z = -1.9;
+
+// ── Hub decor: faded poster (left wall) ──────────────────────
+addBox(scene, 0.04, 1.15, 0.82, -4.93, 2.05, -1.6, mat(0x232a20, 0.85, 0), false);
+addBox(scene, 0.045, 1.0, 0.68, -4.92, 2.05, -1.6, mat(0x33402c, 0.8, 0), false);
+
+// ── Hub decor: corkboard with pinned scraps (back wall) ──────
+addBox(scene, 1.1, 0.78, 0.04, 1.6, 1.9, -4.93, mat(0x3a2a18, 0.95, 0), false);
+[[1.25, 2.05, 0x5a4a2a],[1.85, 2.12, 0x444a3a],[1.4, 1.7, 0x4a4030],[1.95, 1.72, 0x383028]].forEach(([px, py, c]) =>
+  addBox(scene, 0.28, 0.22, 0.01, px, py, -4.90, mat(c, 0.9, 0), false));
+
+// ── Hub decor: coffee mug + cash stack on desk ───────────────
+addBox(scene, 0.12, 0.13, 0.12, -3.15, 0.86, 3.9, mat(0x20180f, 0.7, 0.05), false);
+addBox(scene, 0.14, 0.02, 0.13, -3.15, 0.935, 3.9, mat(0x0a0a08, 0.4, 0.1), false); // coffee surface
+const cashStack = addBox(scene, 0.2, 0.05, 0.12, -3.95, 0.815, 3.78, mat(0x2e3a24, 0.85, 0), false);
+cashStack.rotation.y = 0.3;
+addBox(scene, 0.19, 0.012, 0.11, -3.95, 0.845, 3.78, mat(0x3a4a2c, 0.8, 0), false);
+
 // ── Register interactive objects ────────────────────────────
 // (populated in Section 7)
 
@@ -714,6 +920,12 @@ function isDescendant(obj, ancestor) {
   return false;
 }
 
+function hasNoMergeAncestor(obj) {
+  let cur = obj;
+  while (cur) { if (cur.userData && cur.userData.noMerge) return true; cur = cur.parent; }
+  return false;
+}
+
 function mergeStaticScene() {
   scene.updateMatrixWorld(true);
   const byMat = new Map();
@@ -722,6 +934,7 @@ function mergeStaticScene() {
   scene.traverse(obj => {
     if (!obj.isMesh) return;
     if (obj === screenMesh) return; // keep screen for emissive + interaction
+    if (hasNoMergeAncestor(obj)) return; // interactive (highlightable) objects
     for (const g of EXCLUDE) if (obj === g || isDescendant(obj, g)) return;
 
     const key = obj.material.uuid;
@@ -843,9 +1056,14 @@ document.addEventListener('mousemove', e => {
 // ── Keyboard ────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   keys.add(e.code);
-  if (e.code === 'KeyE') interact();
-  if (e.code === 'KeyF') toggleFlashlight();
-  if (e.code === 'Escape' && gameState === STATE.MENU) closeComputerMenu();
+  // close any open overlay first
+  if (e.code === 'Escape') {
+    if (document.getElementById('keypad-overlay').classList.contains('active')) { closeKeypad(); return; }
+    if (document.getElementById('note-overlay').classList.contains('active'))   { closeNote();   return; }
+    if (gameState === STATE.MENU) { closeComputerMenu(); return; }
+  }
+  if (e.code === 'KeyE' && (gameState === STATE.EXPLORING || gameState === STATE.MISSION)) interact();
+  if (e.code === 'KeyF' && (gameState === STATE.EXPLORING || gameState === STATE.MISSION)) toggleFlashlight();
 });
 document.addEventListener('keyup', e => keys.delete(e.code));
 
@@ -960,18 +1178,59 @@ document.getElementById('btn-flashlight').addEventListener('touchstart', e => { 
 const interactiveRegistry = new Map();
 let currentTarget = null;
 
+// Emissive highlight system (replaces per-object glow PointLights → mobile-friendly)
+const highlightRegistry = new Map(); // tag → [{ mesh, baseEmissive, baseIntensity }]
+let highlightedTag = null;
+const HL_COLOR = new THREE.Color(0x00ff88);
+
 const interactionPrompt = document.getElementById('interaction-prompt');
 const btnInteract       = document.getElementById('btn-interact');
 
 function registerInteractive(group, tag, label) {
-  // Register every descendant mesh; walk up to group when hit
+  // Flag the whole group so the static-merge pass skips it (keeps per-mesh control)
+  group.userData.noMerge = true;
+  const hlList = highlightRegistry.get(tag) || [];
   group.traverse(o => {
     if (o.isMesh) {
       interactiveRegistry.set(o.uuid, { mesh: group, tag, label, cooldown: false });
+      // Clone material so highlighting never bleeds into shared/merged geometry
+      if (o.material && !o.userData._hlReady) {
+        o.material = o.material.clone();
+        o.userData._hlReady = true;
+        hlList.push({
+          mesh: o,
+          baseEmissive: o.material.emissive ? o.material.emissive.clone() : new THREE.Color(0x000000),
+          baseIntensity: o.material.emissiveIntensity ?? 1,
+        });
+      }
     }
   });
+  highlightRegistry.set(tag, hlList);
   // Also register the group itself as a fallback
   interactiveRegistry.set(group.uuid, { mesh: group, tag, label, cooldown: false });
+}
+
+function clearHighlight() {
+  if (highlightedTag === null) return;
+  const list = highlightRegistry.get(highlightedTag);
+  if (list) for (const h of list) {
+    if (!h.mesh.material) continue;
+    h.mesh.material.emissive.copy(h.baseEmissive);
+    h.mesh.material.emissiveIntensity = h.baseIntensity;
+  }
+  highlightedTag = null;
+}
+
+function applyHighlight(tag) {
+  if (highlightedTag === tag) return;
+  clearHighlight();
+  const list = highlightRegistry.get(tag);
+  if (list) for (const h of list) {
+    if (!h.mesh.material) continue;
+    h.mesh.material.emissive.copy(HL_COLOR).multiplyScalar(0.85);
+    h.mesh.material.emissiveIntensity = 0.9;
+  }
+  highlightedTag = tag;
 }
 
 // Chair triggers the full sit-down → computer flow in one action
@@ -1036,12 +1295,11 @@ function setCurrentTarget(entry) {
     interactionPrompt.textContent = entry.label;
     interactionPrompt.style.opacity = '1';
     btnInteract.classList.add('active');
+    applyHighlight(entry.tag);
   } else {
     interactionPrompt.style.opacity = '0';
     btnInteract.classList.remove('active');
-  }
-  for (const [tag, light] of glowLightRegistry) {
-    light.intensity = (entry?.tag === tag) ? 2.5 : 0;
+    clearHighlight();
   }
 }
 
@@ -1166,7 +1424,7 @@ document.getElementById('btn-close-menu').addEventListener('click', closeCompute
 
 // ── Heist targets ───────────────────────────────────────────
 const HEIST_TARGETS = [
-  { id:'house',  name:'Ограбление дома', icon:'🏠', reward:'$20,000',  stashes:1, time:'3 мин'  },
+  { id:'house',  name:'Ограбление дома', icon:'🏠', reward:'$20,000',  stashes:1, time:'8 мин'  },
   { id:'office', name:'Офис компании',   icon:'🏢', reward:'$55,000',  stashes:2, time:'5 мин'  },
   { id:'bank',   name:'City Bank Vault', icon:'🏦', reward:'$250,000', stashes:4, time:'10 мин' },
 ];
@@ -1337,9 +1595,6 @@ function buildMissionScene() {
   const canopyMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.07, 0.55),
     new THREE.MeshStandardMaterial({ color: 0x1a1815, roughness: 0.85 }));
   canopyMesh.position.set(0, 2.25, 0.31); doorGroup.add(canopyMesh);
-  const doorGlow = new THREE.PointLight(0x00ff88, 0, 3, 2);
-  doorGlow.position.set(0, 1.5, 0.3); doorGroup.add(doorGlow);
-  glowLightRegistry.set('door', doorGlow);
   registerInteractive(doorGroup, 'door', isMobile ? 'Взломать замок' : 'E — Взломать замок');
 
   // ── Street lamp (stronger, with bracket arm) ───────────
@@ -1466,14 +1721,7 @@ function buildMissionScene() {
     carGroup.add(wg);
   });
 
-  // Green glow on hover (intensity set by setCurrentTarget)
-  carGlowLight = new THREE.PointLight(0x00ff88, 0, 4, 2);
-  carGlowLight.position.set(0, 1.0, 0);
-  carGroup.add(carGlowLight);
-  glowLightRegistry.set('car', carGlowLight);
-
   registerInteractive(carGroup, 'car', isMobile ? 'Взаимодействовать' : 'E — Взаимодействовать с машиной');
-  buildRaycastTargets();
 
   missionCollidersList = [
     { minX: -3.1, maxX: 1.1, minZ: 0.90, maxZ: 3.10 }, // car (L=3.8 + bumpers, W=1.75 + tires)
@@ -1481,492 +1729,616 @@ function buildMissionScene() {
   ];
 
   buildHouseInterior();
+  mergeMissionStatics();
+  buildRaycastTargets();
   missionRoot.visible = false;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   SECTION 10b — House Interior Builder
+   SECTION 10b — House Interior Builder (large two-storey + attic)
 ═══════════════════════════════════════════════════════════ */
 
 function buildHouseInterior() {
-  const O = HOUSE_OFFSET; // 200 — far past fog (18 m)
-  const GH = 3.2;  // ground floor ceiling height
-  const SH = 4.0;  // second-floor Y offset (floor level)
+  const O = HOUSE_OFFSET;            // interior built far past the fog
+  const GH = 3.0;                    // ground wall height (floor 0 → 3.0)
+  const Fs = 3.3;                    // floor-1 walk surface
+  const FH = 2.7;                    // floor-1 wall height (3.3 → 6.0)
+  const Fa = 6.3;                    // attic walk surface
+  const AH = 2.3;                    // attic wall height (6.3 → 8.6)
 
   // ── Materials ───────────────────────────────────────────
-  const wallMat  = new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.88 });
-  const wallMat2 = new THREE.MeshStandardMaterial({ color: 0x22201e, roughness: 0.85 });
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1510, roughness: 0.75 });
-  const ceilMat  = new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.9 });
-  const woodMat  = new THREE.MeshStandardMaterial({ color: 0x3a2810, roughness: 0.7 });
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.3, metalness: 0.8 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x0e1c2c, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.4 });
-  const tvScreenM = new THREE.MeshStandardMaterial({ color: 0x000810, emissive: 0x002244, emissiveIntensity: 0.4, roughness: 0.05 });
-  const screenGlowM = new THREE.MeshStandardMaterial({ color: 0x001122, emissive: 0x1133ff, emissiveIntensity: 0.6 });
-  const couchMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 });
-  const counterMat = new THREE.MeshStandardMaterial({ color: 0x282420, roughness: 0.65 });
-  const valueMat = new THREE.MeshStandardMaterial({ color: 0xccaa44, roughness: 0.1, metalness: 0.95 });
-  const gemMat   = new THREE.MeshStandardMaterial({ color: 0xff3399, roughness: 0.02, metalness: 0.3 });
-  const whiteMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.7 });
-  const plasticM = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4 });
-  const kidMat   = new THREE.MeshStandardMaterial({ color: 0x1a3a5a, roughness: 0.8 });
-  const bookMat  = new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 0.85 });
+  const wallA   = new THREE.MeshStandardMaterial({ color: 0x2c2722, roughness: 0.93 });
+  const wallB   = new THREE.MeshStandardMaterial({ color: 0x363029, roughness: 0.9 });
+  const wallKid = new THREE.MeshStandardMaterial({ color: 0x2f3a52, roughness: 0.92 });
+  const wallBath= new THREE.MeshStandardMaterial({ color: 0x46505a, roughness: 0.6 });
+  const floor0  = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.86 });
+  const floor1m = new THREE.MeshStandardMaterial({ color: 0x322316, roughness: 0.88 });
+  const ceilM   = new THREE.MeshStandardMaterial({ color: 0x24201a, roughness: 0.95 });
+  const tile    = new THREE.MeshStandardMaterial({ color: 0x8f969b, roughness: 0.5 });
+  const carpet  = new THREE.MeshStandardMaterial({ color: 0x24304a, roughness: 0.97 });
+  const woodD   = new THREE.MeshStandardMaterial({ color: 0x241a10, roughness: 0.85 });
+  const woodM   = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 });
+  const metalM  = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.4, metalness: 0.7 });
+  const fabric  = new THREE.MeshStandardMaterial({ color: 0x3a3630, roughness: 0.95 });
+  const fabricB = new THREE.MeshStandardMaterial({ color: 0x2a3a44, roughness: 0.95 });
+  const sheetM  = new THREE.MeshStandardMaterial({ color: 0x6a6258, roughness: 0.9 });
 
-  // ── Helper: box mesh added to missionRoot ───────────────
-  const B = (w, h, d, x, y, z, mat) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    m.position.set(O + x, y, z);
-    m.receiveShadow = true; m.castShadow = true;
-    missionRoot.add(m); return m;
-  };
-
-  // ═══════════════════════════════════════════════════════
-  // GROUND FLOOR  (Y 0..GH)
-  // Layout (X rel to O):  W: -8..+8, Z: -7..+3
-  //   Entry hall:    Xr -2..+2, Z 0..+3
-  //   Living room:   Xr -8..+1, Z -7..0
-  //   Kitchen:       Xr +1..+8, Z -7..0
-  //   Bathroom GF:   Xr +4..+8, Z 0..+4
-  //   Under-stairs:  Xr -8..-4, Z 0..+4
-  // ═══════════════════════════════════════════════════════
-
-  // Floor & ceiling
-  B(16, 0.12, 11, 0, 0,    -2, floorMat); // ground floor slab
-  B(16, 0.12, 11, 0, GH,   -2, ceilMat);  // ground floor ceiling
-
-  // Outer walls (ground floor)
-  B(0.2, GH, 11, -8, GH/2, -2, wallMat);  // west wall
-  B(0.2, GH, 11,  8, GH/2, -2, wallMat);  // east wall
-  B(16, GH, 0.2,  0, GH/2, -7.1, wallMat); // south wall
-  B(16, GH, 0.2,  0, GH/2,  3.1, wallMat); // north wall (with door gap)
-
-  // Interior partition walls (ground floor)
-  B(9, GH, 0.15,  -3.5, GH/2, 0, wallMat2); // living↔hall south (with gap for entry)
-  B(7, GH, 0.15,   4.5, GH/2, 0, wallMat2); // kitchen↔bath south
-  B(0.15, GH, 4,    1, GH/2, -3.5, wallMat2); // living↔kitchen divider
-  B(0.15, GH, 4,    4, GH/2,  2, wallMat2);  // bath partition
-
-  // ── Living room furniture ───────────────────────────────
-  // Couch (large L-shape)
-  B(3.5, 0.5, 1.0, -4, 0.25, -2.5, couchMat); // seat
-  B(3.5, 0.8, 0.3, -4, 0.65, -3.0, couchMat); // back
-  B(0.3, 0.8, 1.0, -5.5, 0.65, -2.5, couchMat); // arm L
-  B(0.3, 0.8, 1.0, -2.5, 0.65, -2.5, couchMat); // arm R
-  // Coffee table
-  B(1.2, 0.05, 0.7, -4, 0.5, -1.6, woodMat);
-  B(0.05, 0.5, 0.05, -4.5, 0.25, -1.25, woodMat); // leg
-  B(0.05, 0.5, 0.05, -3.5, 0.25, -1.25, woodMat);
-  B(0.05, 0.5, 0.05, -4.5, 0.25, -1.95, woodMat);
-  B(0.05, 0.5, 0.05, -3.5, 0.25, -1.95, woodMat);
-  // TV stand + TV
-  B(1.5, 0.5, 0.4, -6.5, 0.25, -5.5, woodMat); // stand
-  B(1.4, 0.05, 0.3, -6.5, 0.52, -5.5, woodMat);
-  B(1.3, 0.75, 0.06, -6.5, 1.0, -5.7, plasticM);  // TV frame
-  B(1.15, 0.62, 0.04, -6.5, 1.0, -5.68, tvScreenM); // screen
-  // Shelf unit on west wall
-  B(0.12, 2.0, 1.2, -7.8, 1.0, -4, woodMat); // shelf back
-  B(1.2, 0.06, 0.3, -7.2, 0.5, -4, woodMat);
-  B(1.2, 0.06, 0.3, -7.2, 1.1, -4, woodMat);
-  B(1.2, 0.06, 0.3, -7.2, 1.7, -4, woodMat);
-  // Small console box on shelf
-  B(0.35, 0.12, 0.25, -7.1, 0.57, -4, plasticM);
-  // Bookcase (east side of living room)
-  B(0.12, 2.0, 1.5, 0.7, 1.0, -5, woodMat);
-  B(1.5, 0.06, 0.3, 0.1, 0.6, -5, woodMat);
-  B(1.5, 0.06, 0.3, 0.1, 1.2, -5, woodMat);
-  B(1.5, 0.06, 0.3, 0.1, 1.8, -5, woodMat);
-  // Books
-  for (let bk = 0; bk < 5; bk++) {
-    B(0.07, 0.25, 0.22, -0.25 + bk*0.18, 0.73, -5, bookMat);
-    B(0.07, 0.22, 0.22, -0.25 + bk*0.18, 1.33, -5, new THREE.MeshStandardMaterial({ color: 0x1a2a3a, roughness: 0.85 }));
+  // ── Builder helpers (X is offset by O) ──────────────────
+  function B(w, h, d, x, y, z, m) {
+    const e = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    e.position.set(O + x, y, z); e.castShadow = true; e.receiveShadow = true;
+    missionRoot.add(e); return e;
+  }
+  function Pl(w, d, x, y, z, m) {
+    const e = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m);
+    e.rotation.x = -Math.PI / 2; e.position.set(O + x, y, z); e.receiveShadow = true;
+    missionRoot.add(e); return e;
+  }
+  function col(set, x0, x1, z0, z1) {
+    set.push({ minX: O + Math.min(x0, x1), maxX: O + Math.max(x0, x1),
+               minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1) });
+  }
+  function fc(set, x, z, hw, hd) { col(set, x - hw, x + hw, z - hd, z + hd); }
+  function F(w, h, d, x, y, z, m, set) { // furniture box + collider
+    B(w, h, d, x, y, z, m);
+    if (set) fc(set, x, z, w / 2 + 0.04, d / 2 + 0.04);
+  }
+  // wall along X (constant Z), with array of [center,width] doorway gaps
+  function wallX(set, z, x0, x1, y, h, t, m, gaps) {
+    const gs = (gaps || []).slice().sort((a, b) => a[0] - b[0]); let cur = x0;
+    const seg = (a, b) => { if (b - a < 0.03) return;
+      B(b - a, h, t, (a + b) / 2, y + h / 2, z, m); col(set, a, b, z - t / 2, z + t / 2); };
+    for (const [gc, gw] of gs) { const lE = gc - gw / 2; if (lE > cur) seg(cur, lE);
+      const lh = h - 2.05; if (lh > 0.04) B(gw, lh, t, gc, y + 2.05 + lh / 2, z, m); cur = gc + gw / 2; }
+    if (x1 > cur) seg(cur, x1);
+  }
+  // wall along Z (constant X)
+  function wallZ(set, x, z0, z1, y, h, t, m, gaps) {
+    const gs = (gaps || []).slice().sort((a, b) => a[0] - b[0]); let cur = z0;
+    const seg = (a, b) => { if (b - a < 0.03) return;
+      B(t, h, b - a, x, y + h / 2, (a + b) / 2, m); col(set, x - t / 2, x + t / 2, a, b); };
+    for (const [gc, gw] of gs) { const lE = gc - gw / 2; if (lE > cur) seg(cur, lE);
+      const lh = h - 2.05; if (lh > 0.04) B(t, lh, gw, x, y + 2.05 + lh / 2, gc, m); cur = gc + gw / 2; }
+    if (z1 > cur) seg(cur, z1);
   }
 
-  // ── Kitchen furniture ────────────────────────────────────
-  // Counter along south wall
-  B(7, 0.9, 0.6, 4.5, 0.45, -6.7, counterMat);
-  B(7, 0.05, 0.65, 4.5, 0.9, -6.7, whiteMat); // counter top
-  // Counter along east wall
-  B(0.6, 0.9, 6, 7.7, 0.45, -3.5, counterMat);
-  B(0.65, 0.05, 6, 7.7, 0.9, -3.5, whiteMat);
-  // Sink
-  B(0.8, 0.08, 0.5, 6.5, 0.92, -6.7, metalMat);
-  B(0.65, 0.06, 0.38, 6.5, 0.96, -6.7, glassMat);
-  // Stove
-  B(0.7, 0.04, 0.5, 4.5, 0.92, -6.7, metalMat);
-  // Kitchen table
-  B(1.4, 0.06, 0.9, 3.5, 0.8, -4.5, woodMat);
-  B(0.06, 0.8, 0.06, 2.85, 0.4, -4.1, woodMat);
-  B(0.06, 0.8, 0.06, 4.15, 0.4, -4.1, woodMat);
-  B(0.06, 0.8, 0.06, 2.85, 0.4, -4.9, woodMat);
-  B(0.06, 0.8, 0.06, 4.15, 0.4, -4.9, woodMat);
-  // Chairs
-  B(0.55, 0.05, 0.5, 2.4, 0.45, -4.5, woodMat);
-  B(0.55, 0.5, 0.06, 2.4, 0.7, -4.7, woodMat);
-  B(0.55, 0.05, 0.5, 4.6, 0.45, -4.5, woodMat);
-  B(0.55, 0.5, 0.06, 4.6, 0.7, -4.7, woodMat);
+  // ── Lighting (kept minimal; per-floor with limited range) ─
+  const gl1 = new THREE.PointLight(0xffe2b0, 9, 13, 1.6); gl1.position.set(O - 4, 2.6, 2);    missionRoot.add(gl1);
+  const gl2 = new THREE.PointLight(0xffd49a, 7, 12, 1.7); gl2.position.set(O + 4, 2.6, -3);   missionRoot.add(gl2);
+  const fl1 = new THREE.PointLight(0xcfd8ff, 8, 12, 1.7); fl1.position.set(O - 4, 5.4, 2);    missionRoot.add(fl1);
+  const fl2 = new THREE.PointLight(0xffd8a0, 7, 12, 1.7); fl2.position.set(O + 4, 5.4, -3);   missionRoot.add(fl2);
+  const al  = new THREE.PointLight(0xffc488, 5, 7, 2);    al.position.set(O - 5.5, 7.8, -4.5); missionRoot.add(al);
 
-  // ── Staircase (ground floor half) ───────────────────────
-  for (let s = 0; s < 8; s++) {
-    B(1.8, 0.12, 0.45, -5.5, s * 0.5 + 0.12, s * 0.45 + 0.22, woodMat);
+  // ── Slabs (floors / ceilings) ───────────────────────────
+  Pl(18.4, 12.4, 0, 0.0, -1, floor0);                       // ground floor
+  // floor-1 slab with a stairwell hole at X[-1.5,1.5] Z[-6.5,-3.5]
+  B(18.4, 0.3, 8.5, 0, 3.15, 0.75, floor1m);                 // north piece  Z[-3.5,5]
+  B(7.5, 0.3, 3.5, -5.25, 3.15, -5.25, floor1m);             // SW piece     X[-9,-1.5] Z[-7,-3.5]
+  B(7.5, 0.3, 3.5,  5.25, 3.15, -5.25, floor1m);             // SE piece     X[1.5,9]  Z[-7,-3.5]
+  B(3.0, 0.3, 0.5, 0, 3.15, -6.75, floor1m);                 // back strip   X[-1.5,1.5] Z[-7,-6.5]
+  B(18.4, 0.3, 12.4, 0, 6.15, -1, ceilM);                    // floor-1 ceiling / attic slab
+  B(6.4, 0.3, 5.4, -6, 8.75, -4.5, ceilM);                   // attic ceiling (over child quadrant)
+
+  // room floor finishes (thin, decorative)
+  Pl(5.6, 5.8,  6, 0.02, 2, tile);                           // kitchen tile (ground)
+  Pl(7.0, 5.4, -5, 3.33, -4, carpet);                        // child carpet (floor1)
+  Pl(7.0, 5.4,  5, 3.33,  2, tile);                          // bathroom tile (floor1)
+
+  /* ═══════ GROUND FLOOR — collF0 (walk Y=0) ═══════ */
+  // outer walls
+  wallX(collF0, 5,  -9, 9, 0, GH, 0.2, wallA);               // north (front)
+  wallX(collF0, -7, -9, 9, 0, GH, 0.2, wallA);               // south (back)
+  wallZ(collF0, -9, -7, 5, 0, GH, 0.2, wallA);               // west
+  wallZ(collF0,  9, -7, 5, 0, GH, 0.2, wallA);               // east
+  // great-room / back-hall divider (E-W) at Z=-1 with central doorway
+  wallX(collF0, -1, -9, 9, 0, GH, 0.15, wallB, [[0, 1.8]]);
+  // kitchen half-wall divider (low) between dining and kitchen at X=2.6
+  B(0.12, 1.0, 5.6, 2.6, 0.5, 2.2, wallB);
+  // guest WC (back-right): north wall Z=-3.5 with door, west wall X=4
+  wallX(collF0, -3.5, 4, 9, 0, GH, 0.13, wallBath, [[6.5, 1.1]]);
+  wallZ(collF0, 4, -7, -3.5, 0, GH, 0.13, wallBath);
+  // storage closet (back-left): north wall Z=-4 with door, east wall X=-5
+  wallX(collF0, -4, -9, -5, 0, GH, 0.13, wallB, [[-7, 1.1]]);
+  wallZ(collF0, -5, -7, -4, 0, GH, 0.13, wallB);
+
+  // ----- Living room furniture (left) -----
+  F(2.6, 0.7, 1.0, -5, 0.35, 4.3, fabric, collF0);           // sofa base (against N wall)
+  B(2.6, 0.5, 0.25, -5, 0.85, 4.75, fabric);                 // sofa back
+  B(0.25, 0.6, 1.0, -6.35, 0.5, 4.3, fabric);                // sofa arm L
+  B(0.25, 0.6, 1.0, -3.65, 0.5, 4.3, fabric);                // sofa arm R
+  F(1.3, 0.4, 0.7, -5, 0.2, 2.4, woodD, collF0);             // coffee table
+  F(0.4, 0.5, 2.2, -8.6, 0.25, 2.0, woodD, collF0);          // tv stand (W wall)
+  B(0.05, 1.6, 2.0, -8.92, 1.4, 2.0, wallB);                 // wall accent behind tv
+
+  // ----- Dining (center) -----
+  F(1.8, 0.1, 1.0, 0, 0.78, 1.0, woodM, collF0);             // dining table top
+  [[-0.8,0.6],[0.8,0.6],[-0.8,1.4],[0.8,1.4]].forEach(([dx,dz])=>B(0.1,0.78,0.1,dx,0.39,dz,woodD));
+  B(1.4, 0.9, 0.5, -1, 0.45, 4.65, woodD);                   // sideboard (N wall)
+  fc(collF0, -1, 4.65, 0.75, 0.3);
+
+  // ----- Kitchen (right) -----
+  F(3.4, 0.92, 0.65, 6.5, 0.46, 4.55, woodM, collF0);        // counter run (N wall)
+  B(3.4, 0.05, 0.66, 6.5, 0.95, 4.55, tile);                 // counter top
+  B(3.4, 0.9, 0.55, 6.5, 2.3, 4.6, woodD);                   // upper cabinets
+  F(0.85, 1.9, 0.7, 8.4, 0.95, 2.0, metalM, collF0);         // fridge (E wall)
+  F(2.0, 0.92, 0.65, 5.0, 0.46, 1.2, woodM, collF0);         // island
+  B(2.0, 0.05, 0.66, 5.0, 0.95, 1.2, tile);
+
+  // ----- Back hall: staircase + closets -----
+  for (let i = 0; i < 14; i++) {
+    B(2.4, 0.18, 0.24, 0, 0.12 + i * 0.235, -3.6 - i * 0.205, woodM);
   }
-  // Stair railings
-  B(0.06, SH + 0.2, 0.06, -4.65, SH/2, -1.8, metalMat);
-  B(0.06, SH + 0.2, 0.06, -6.35, SH/2, -1.8, metalMat);
-
-  // ── Bathroom (GF) ───────────────────────────────────────
-  // Toilet
-  B(0.45, 0.35, 0.6, 6.5, 0.18, 2.5, whiteMat);
-  B(0.45, 0.06, 0.6, 6.5, 0.37, 2.5, whiteMat);
-  B(0.45, 0.5, 0.1, 6.5, 0.43, 2.2, whiteMat); // tank
-  // Bathtub
-  B(1.5, 0.35, 0.7, 5.5, 0.18, 0.8, whiteMat);
-  B(1.5, 0.08, 0.7, 5.5, 0.4, 0.8, glassMat); // water surface
-
-  // Under-stairs closet (no furniture, just walls)
-  B(0.12, SH, 4, -7.9, SH/2, 2, wallMat2);
-  B(4, SH, 0.12, -6, SH/2, 4, wallMat2);
-
-  // ── Ground floor lighting ────────────────────────────────
-  const glLivingRoom = new THREE.PointLight(0xffeedd, 6, 12, 1.5);
-  glLivingRoom.position.set(O - 3.5, GH - 0.2, -3.5); missionRoot.add(glLivingRoom);
-  const glKitchen = new THREE.PointLight(0xfff0dd, 5, 10, 1.5);
-  glKitchen.position.set(O + 4.5, GH - 0.2, -3.5); missionRoot.add(glKitchen);
-
-  // ══════════════════════════════════════════════════════
-  // SECOND FLOOR (Y = SH)
-  //   Landing:        Xr -2..+2, Z 0..+3
-  //   Bedroom:        Xr -8..0,  Z 0..+4
-  //   2nd Bathroom:   Xr 0..+8,  Z 0..+4
-  //   Children's rm:  Xr -8..0,  Z -7..0
-  //   Office:         Xr 0..+8,  Z -7..0
-  // ══════════════════════════════════════════════════════
-
-  const FY = SH; // floor Y for second floor
-
-  // Floor & ceiling (second floor)
-  B(16, 0.12, 11, 0, FY, -2, floorMat);
-  B(16, 0.12, 11, 0, FY + GH, -2, ceilMat);
-
-  // Outer walls (second floor)
-  B(0.2, GH, 11, -8, FY + GH/2, -2, wallMat);
-  B(0.2, GH, 11,  8, FY + GH/2, -2, wallMat);
-  B(16, GH, 0.2,  0, FY + GH/2, -7.1, wallMat);
-  B(16, GH, 0.2,  0, FY + GH/2,  3.1, wallMat);
-
-  // Interior partitions (second floor)
-  B(8, GH, 0.15, -4, FY + GH/2, 0, wallMat2);  // bedroom↔landing south
-  B(8, GH, 0.15,  4, FY + GH/2, 0, wallMat2);  // bath2↔landing south
-  B(0.15, GH, 7.1,  0, FY + GH/2, -3.5, wallMat2); // bedroom↔children divider
-
-  // Staircase (second floor half — open landing)
-  for (let s = 0; s < 8; s++) {
-    B(1.8, 0.12, 0.45, -5.5, FY + s * 0.5 + 0.12, -(s * 0.45) - 0.22 + 3.76, woodMat);
-  }
-
-  // ── Bedroom ──────────────────────────────────────────────
-  // Bed
-  B(1.8, 0.35, 2.2, -5.5, FY + 0.18, 2, woodMat); // base
-  B(1.8, 0.5, 2.2, -5.5, FY + 0.53, 2, new THREE.MeshStandardMaterial({ color: 0x3a3050, roughness: 0.9 })); // mattress
-  B(1.8, 0.6, 0.2, -5.5, FY + 0.85, 3.0, woodMat); // headboard
-  // Wardrobe
-  B(0.5, 2.0, 1.8, -7.6, FY + 1.0, 0.8, woodMat);
-  B(0.06, 1.9, 1.7, -7.3, FY + 1.0, 0.8, woodMat); // door
-  // Dresser
-  B(1.2, 0.8, 0.5, -3.5, FY + 0.4, 3.2, woodMat);
-  // Bedside table
-  B(0.45, 0.55, 0.4, -6.5, FY + 0.28, 1.3, woodMat);
-  B(0.45, 0.55, 0.4, -4.5, FY + 0.28, 1.3, woodMat);
-  // Vanity mirror
-  B(0.06, 1.0, 0.7, -7.7, FY + 1.3, 3.2, metalMat);
-  B(0.04, 0.85, 0.55, -7.65, FY + 1.3, 3.2, glassMat);
-
-  // ── Second bathroom ──────────────────────────────────────
-  B(0.45, 0.35, 0.6, 6.5, FY + 0.18, 2.5, whiteMat);
-  B(0.45, 0.06, 0.6, 6.5, FY + 0.37, 2.5, whiteMat);
-  B(0.45, 0.5, 0.1, 6.5, FY + 0.43, 2.2, whiteMat);
-  B(1.2, 0.35, 0.6, 5.0, FY + 0.18, 2.5, whiteMat); // shower tray
-
-  // ── Children's room ──────────────────────────────────────
-  // Bunk bed
-  B(0.9, 0.2, 1.8, -6, FY + 0.1, -4.5, kidMat);   // lower bunk
-  B(0.9, 0.2, 1.8, -6, FY + 1.1, -4.5, kidMat);   // upper bunk
-  B(0.06, 1.3, 0.06, -6.4, FY + 0.65, -3.65, woodMat); // post FL
-  B(0.06, 1.3, 0.06, -5.6, FY + 0.65, -3.65, woodMat);
-  B(0.06, 1.3, 0.06, -6.4, FY + 0.65, -5.35, woodMat);
-  B(0.06, 1.3, 0.06, -5.6, FY + 0.65, -5.35, woodMat);
-  // Small desk
-  B(0.9, 0.05, 0.55, -3, FY + 0.7, -6.5, woodMat);
-  B(0.06, 0.7, 0.06, -3.4, FY + 0.35, -6.25, woodMat);
-  B(0.06, 0.7, 0.06, -2.6, FY + 0.35, -6.25, woodMat);
-  // Toy box
-  B(0.8, 0.4, 0.5, -7, FY + 0.2, -6.5, kidMat);
-
-  // ── Office ───────────────────────────────────────────────
-  // Desk
-  B(2.0, 0.06, 0.8, 5, FY + 0.76, -6.2, woodMat);
-  B(0.06, 0.76, 0.06, 4.1, FY + 0.38, -5.85, woodMat);
-  B(0.06, 0.76, 0.06, 5.9, FY + 0.38, -5.85, woodMat);
-  B(0.06, 0.76, 0.06, 4.1, FY + 0.38, -6.55, woodMat);
-  B(0.06, 0.76, 0.06, 5.9, FY + 0.38, -6.55, woodMat);
-  // Office chair
-  B(0.55, 0.05, 0.5, 5, FY + 0.45, -5.2, woodMat);
-  B(0.55, 0.6, 0.06, 5, FY + 0.75, -5.45, woodMat);
-  // Bookshelf
-  B(0.12, 2.0, 1.5, 7.8, FY + 1.0, -4.5, woodMat);
-  B(1.5, 0.06, 0.3, 7.2, FY + 0.5, -4.5, woodMat);
-  B(1.5, 0.06, 0.3, 7.2, FY + 1.1, -4.5, woodMat);
-  B(1.5, 0.06, 0.3, 7.2, FY + 1.7, -4.5, woodMat);
-  for (let bk = 0; bk < 4; bk++) {
-    B(0.09, 0.28, 0.22, 7.5 - bk*0.2, FY + 0.64, -4.5, bookMat);
-    B(0.09, 0.24, 0.22, 7.5 - bk*0.2, FY + 1.24, -4.5, new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.85 }));
-  }
-
-  // ── Second floor lighting ────────────────────────────────
-  const sfBedroom = new THREE.PointLight(0xffeedd, 4.5, 10, 1.5);
-  sfBedroom.position.set(O - 4, FY + GH - 0.2, 2); missionRoot.add(sfBedroom);
-  const sfKids = new THREE.PointLight(0xeef0ff, 4, 10, 1.5);
-  sfKids.position.set(O - 4, FY + GH - 0.2, -3.5); missionRoot.add(sfKids);
-  const sfOffice = new THREE.PointLight(0xddeeff, 4.5, 10, 1.5);
-  sfOffice.position.set(O + 5, FY + GH - 0.2, -3.5); missionRoot.add(sfOffice);
-
-  // ══════════════════════════════════════════════════════
-  // EXIT DOOR (inside, near entry)
-  // ══════════════════════════════════════════════════════
-  const exitDoorGroup = new THREE.Group();
-  exitDoorGroup.position.set(O, 0, 2.9);
-  missionRoot.add(exitDoorGroup);
-  const exitDM = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.1, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 0.8 }));
-  exitDM.position.set(0, 1.05, 0); exitDoorGroup.add(exitDM);
-  const exitLabel = new THREE.Mesh(
-    new THREE.BoxGeometry(0.3, 0.12, 0.02),
-    new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x00ff44, emissiveIntensity: 0.8 })
-  );
-  exitLabel.position.set(0, 1.6, 0.05); exitDoorGroup.add(exitLabel);
-  const exitGlow = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
-  exitGlow.position.set(0, 1.5, 0.2); exitDoorGroup.add(exitGlow);
-  glowLightRegistry.set('exit_door', exitGlow);
-  registerInteractive(exitDoorGroup, 'exit_door', isMobile ? 'Выйти из дома' : 'E — Выйти из дома');
-
-  // ══════════════════════════════════════════════════════
-  // STAIRCASE INTERACTIVE
-  // ══════════════════════════════════════════════════════
-  const stairGroup = new THREE.Group();
-  stairGroup.position.set(O - 5.5, 0, 0.3);
-  missionRoot.add(stairGroup);
-  const stairSign = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0x1a1008, roughness: 0.7 }));
-  stairSign.position.set(0, 1.4, 0); stairGroup.add(stairSign);
-  const stairArrow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0x006622, emissive: 0x00ff44, emissiveIntensity: 1.0 }));
-  stairArrow.position.set(0, 1.58, 0.05); stairGroup.add(stairArrow);
-  const stairGlow = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
-  stairGlow.position.set(0, 1.5, 0.3); stairGroup.add(stairGlow);
-  glowLightRegistry.set('stairs', stairGlow);
-  registerInteractive(stairGroup, 'stairs', isMobile ? 'Подняться' : 'E — Подняться');
-
-  // ══════════════════════════════════════════════════════
-  // COLLECTIBLES — helper
-  // ══════════════════════════════════════════════════════
-  const addCollectible = (tag, value, label, x, y, z, buildFn) => {
-    const g = new THREE.Group();
-    g.position.set(O + x, y, z);
-    buildFn(g);
-    const gl = new THREE.PointLight(0x00ff88, 0, 2.5, 2);
-    gl.position.set(0, 0.5, 0.2); g.add(gl);
-    glowLightRegistry.set(tag, gl);
+  B(0.12, 1.1, 2.7, -1.25, Fs - 0.3, -5.2, woodD);           // stair stringer L
+  B(0.12, 1.1, 2.7,  1.25, Fs - 0.3, -5.2, woodD);           // stair stringer R
+  fc(collF0, 0, -4.95, 1.35, 1.55);                          // block the steps
+  // newel post = stairs_up interactive
+  {
+    const g = new THREE.Group(); g.position.set(O + 0, 0, -3.35);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.05, 0.14), woodD);
+    post.position.y = 0.52; g.add(post);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.6 }));
+    knob.position.y = 1.08; g.add(knob);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 2.0), woodD);
+    rail.position.set(0, 1.0, -1.0); rail.rotation.x = -0.5; g.add(rail);
     missionRoot.add(g);
-    activeCollectibles.set(tag, { group: g, value });
-    const lbl = isMobile ? `Забрать (${value.toLocaleString()}$)` : `E — Забрать (${value.toLocaleString()}$)`;
-    registerInteractive(g, tag, lbl);
-  };
+    registerInteractive(g, 'stairs_up', isMobile ? 'Наверх' : 'E — Подняться наверх');
+  }
 
-  // ── Visible collectibles (ground floor) ─────────────────
-  // TV in living room (on stand)
-  addCollectible('collect_tv', 500, 'Телевизор', -6.5, 0.58, -5.65, g => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.06), plasticM);
-    f.position.set(0, 0, 0); g.add(f);
-    const s = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.62, 0.04), tvScreenM);
-    s.position.set(0, 0, 0.02); g.add(s);
-  });
+  /* ═══════ FLOOR 1 — collF1 (walk Y=3.3) ═══════ */
+  wallX(collF1, 5,  -9, 9, Fs, FH, 0.2, wallA);
+  wallX(collF1, -7, -9, 9, Fs, FH, 0.2, wallA);
+  wallZ(collF1, -9, -7, 5, Fs, FH, 0.2, wallA);
+  wallZ(collF1,  9, -7, 5, Fs, FH, 0.2, wallA);
+  // central hallway walls (X=-1.5 and X=1.5), each with two doorways.
+  // back-room doors are at Z=-2 (NOT Z=-5, which would sit inside the stairwell hole).
+  wallZ(collF1, -1.5, -7, 5, Fs, FH, 0.14, wallB, [[-2, 1.5], [3, 1.5]]);
+  wallZ(collF1,  1.5, -7, 5, Fs, FH, 0.14, wallB, [[-2, 1.5], [3, 1.5]]);
+  // front/back partitions each side at Z=-1 (solid)
+  wallX(collF1, -1, -9, -1.5, Fs, FH, 0.14, wallB);
+  wallX(collF1, -1,  1.5, 9, Fs, FH, 0.14, wallB);
+  // child room tint panel (west wall)
+  B(0.04, FH, 5.8, -8.97, Fs + FH / 2, -4, wallKid);
+  // block the stairwell hole on floor 1
+  col(collF1, -1.5, 1.5, -6.5, -3.5);
+  // stairs_down post at the stairwell edge
+  {
+    const g = new THREE.Group(); g.position.set(O + 0, Fs, -3.4);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.0, 0.14), woodD);
+    post.position.y = 0.5; g.add(post);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 0.08), woodD);
+    rail.position.set(0, 0.95, 0); g.add(rail);
+    [-1.2, 1.2].forEach(rx => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), woodD);
+      p.position.set(rx, 0.5, 0); g.add(p); });
+    missionRoot.add(g);
+    registerInteractive(g, 'stairs_down', isMobile ? 'Вниз' : 'E — Спуститься вниз');
+  }
 
-  // Game console on shelf
-  addCollectible('collect_console', 300, 'Игровая консоль', -7.1, 0.57, -4.0, g => {
-    const c = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.25), plasticM);
-    g.add(c);
-    const l = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04),
-      new THREE.MeshStandardMaterial({ color: 0x002200, emissive: 0x00ff22, emissiveIntensity: 1 }));
-    l.position.set(0.12, 0.05, 0); g.add(l);
-  });
+  // ----- MASTER BEDROOM (front-left) -----
+  F(2.2, 0.5, 2.4, -5.5, Fs + 0.27, 2.0, woodD, collF1);     // bed base
+  B(2.2, 0.5, 0.2, -5.5, Fs + 0.5, 3.15, woodD);             // headboard
+  B(2.1, 0.18, 2.2, -5.5, Fs + 0.6, 2.0, sheetM);            // mattress/sheets
+  B(1.6, 0.12, 0.5, -5.5, Fs + 0.72, 2.9, fabric);           // pillows
+  F(0.6, 0.5, 0.5, -3.1, Fs + 0.25, 3.3, woodM, collF1);     // nightstand R
+  F(0.6, 0.5, 0.5, -7.9, Fs + 0.25, 3.3, woodM, collF1);     // nightstand L
+  F(1.8, 0.9, 0.55, -7.0, Fs + 0.45, 4.6, woodM, collF1);    // dresser (N wall)
+  B(1.0, 0.7, 0.04, -7.0, Fs + 1.5, 4.86, metalM);           // mirror over dresser
 
-  // Jewelry on coffee table
-  addCollectible('collect_jewelry1', 800, 'Украшения', -4.0, 0.58, -1.6, g => {
-    const box = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.16),
-      new THREE.MeshStandardMaterial({ color: 0x1a0808, roughness: 0.6 }));
-    g.add(box);
-    const gem = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 6), gemMat);
-    gem.position.set(0, 0.08, 0); g.add(gem);
-  });
+  // ----- BATHROOM (front-right) -----
+  F(1.7, 0.5, 0.8, 7.6, Fs + 0.28, 4.4, tile, collF1);       // bathtub shell
+  B(1.5, 0.16, 0.6, 7.6, Fs + 0.5, 4.4, sheetM);             // tub inner
+  F(0.8, 0.85, 0.55, 3.0, Fs + 0.42, 4.5, woodM, collF1);    // vanity
+  B(0.8, 0.06, 0.56, 3.0, Fs + 0.85, 4.5, tile);
+  B(0.55, 0.5, 0.04, 3.0, Fs + 1.4, 4.86, metalM);           // mirror
+  F(0.55, 0.75, 0.55, 5.0, Fs + 0.37, 4.6, tile, collF1);    // toilet block
 
-  // Coffee maker in kitchen
-  addCollectible('collect_coffeemaker', 150, 'Кофемашина', 5.5, 0.96, -6.5, g => {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.32, 0.18), whiteMat);
-    g.add(body);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.06, 0.14), metalMat);
-    top.position.set(0, 0.19, 0); g.add(top);
-    const btn = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6),
-      new THREE.MeshStandardMaterial({ color: 0x004400, emissive: 0x00aa44, emissiveIntensity: 0.8 }));
-    btn.position.set(0.06, 0.02, 0.09); g.add(btn);
-  });
+  // ----- CHILD'S ROOM (back-left) — Тёма -----
+  F(1.0, 0.4, 2.2, -8.2, Fs + 0.2, -5.5, woodM, collF1);     // bunk lower frame
+  B(1.0, 0.16, 2.1, -8.2, Fs + 0.35, -5.5, fabricB);         // lower mattress
+  B(0.95, 0.1, 0.45, -8.2, Fs + 0.46, -6.4, sheetM);         // pillow
+  B(1.0, 0.4, 2.2, -8.2, Fs + 1.5, -5.5, woodM);             // bunk upper frame
+  B(1.0, 0.16, 2.1, -8.2, Fs + 1.65, -5.5, fabricB);         // upper mattress
+  [[-8.65,-6.5],[-7.75,-6.5],[-8.65,-4.5],[-7.75,-4.5]].forEach(([px,pz])=>
+    B(0.08, 1.9, 0.08, px, Fs + 0.95, pz, woodD));           // bunk posts
+  F(1.0, 0.75, 0.55, -2.5, Fs + 0.37, -2.4, woodM, collF1);  // small desk
+  B(1.0, 0.04, 0.55, -2.5, Fs + 0.75, -2.4, woodM);
+  F(0.55, 0.5, 0.45, -2.6, Fs + 0.25, -6.5, woodM, collF1);  // toy chest
+  B(2.4, 0.06, 0.35, -3.0, Fs + 1.5, -6.78, woodD);          // wall shelf (S wall)
 
-  // Laptop on kitchen table
-  addCollectible('collect_laptop', 600, 'Ноутбук', 3.5, 0.84, -4.4, g => {
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.36), plasticM);
-    g.add(base);
-    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.36, 0.025), plasticM);
-    lid.position.set(0, 0.18, -0.165); lid.rotation.x = -0.95; g.add(lid);
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.32, 0.01), screenGlowM);
-    screen.position.copy(lid.position); screen.position.z -= 0.01; screen.rotation.x = lid.rotation.x; g.add(screen);
-  });
+  // ----- OFFICE (back-right) -----
+  F(1.9, 0.75, 0.75, 6.0, Fs + 0.37, -5.6, woodD, collF1);   // big desk (S wall)
+  B(1.9, 0.05, 0.75, 6.0, Fs + 0.75, -5.6, woodD);
+  F(0.7, 0.95, 0.5, 8.3, Fs + 0.47, -4.0, woodD, collF1);    // bookshelf (E wall)
+  B(0.7, 1.7, 0.5, 8.3, Fs + 1.65, -4.0, woodD);             // bookshelf upper
+  F(0.6, 0.55, 0.6, 3.0, Fs + 0.27, -6.4, fabric, collF1);   // office chair
 
-  // ── Visible collectibles (second floor) ──────────────────
-  // Watches on bedroom dresser
-  addCollectible('collect_watches', 1200, 'Часы', -3.5, FY + 0.82, 3.2, g => {
-    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.04, 8), woodMat);
-    g.add(stand);
-    const face = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, 12), valueMat);
-    face.position.y = 0.03; g.add(face);
-  });
+  /* ═══════ ATTIC — collAttic (walk Y=6.3) ═══════ */
+  wallX(collAttic, -2, -9, -3, Fa, AH, 0.18, wallB);         // attic front
+  wallX(collAttic, -7, -9, -3, Fa, AH, 0.18, wallB);         // attic back
+  wallZ(collAttic, -9, -7, -2, Fa, AH, 0.18, wallB);         // attic west
+  wallZ(collAttic, -3, -7, -2, Fa, AH, 0.18, wallB);         // attic east
+  F(0.7, 0.6, 0.7, -7.5, Fa + 0.3, -6, woodD, collAttic);    // old boxes
+  F(0.6, 0.5, 0.6, -6.6, Fa + 0.25, -6.2, woodD, collAttic);
+  F(0.8, 0.45, 0.6, -4.2, Fa + 0.22, -3.0, woodD, collAttic);
+  B(0.5, 0.4, 0.5, -7.4, Fa + 0.75, -6, woodD);              // stacked box
+  B(0.1, 0.12, 0.1, -5.5, Fa + 1.9, -4.5, new THREE.MeshStandardMaterial(
+    { color: 0x554422, emissive: 0xffcc66, emissiveIntensity: 1.4 }));   // bulb
 
-  // Necklace on bedroom dresser
-  addCollectible('collect_jewelry2', 900, 'Ожерелье', -3.0, FY + 0.82, 3.25, g => {
-    for (let i = 0; i < 8; i++) {
-      const bead = new THREE.Mesh(new THREE.SphereGeometry(0.018, 5, 5), valueMat);
-      bead.position.set(Math.cos(i * Math.PI / 4) * 0.06, 0, Math.sin(i * Math.PI / 4) * 0.06);
-      g.add(bead);
+  // attic hatch DOWN (back to child's room)
+  {
+    const g = new THREE.Group(); g.position.set(O - 5, Fa, -3.6);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 1.0),
+      new THREE.MeshStandardMaterial({ color: 0x1a140c, roughness: 0.9 }));
+    g.add(frame);
+    const hole = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.04, 0.8),
+      new THREE.MeshStandardMaterial({ color: 0x000000 })); hole.position.y = -0.02; g.add(hole);
+    const rung = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.05), metalM);
+    rung.position.set(0, 0.18, 0.3); g.add(rung);
+    missionRoot.add(g);
+    registerInteractive(g, 'attic_down', isMobile ? 'Спуститься' : 'E — Спуститься в комнату');
+  }
+
+  // attic hatch UP in child's-room ceiling (misdirection)
+  {
+    const g = new THREE.Group(); g.position.set(O - 5, 5.97, -3.5);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.05, 0.9),
+      new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 }));
+    g.add(lid);
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 1.0),
+      new THREE.MeshStandardMaterial({ color: 0x181208, roughness: 0.92 }));
+    rim.position.y = 0.04; g.add(rim);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 0.18),
+      new THREE.MeshStandardMaterial({ color: 0x3a2c1a, roughness: 0.7 }));
+    handle.position.y = -0.33; g.add(handle);                // hangs down for targeting
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.018, 8, 14), metalM);
+    ring.position.y = -0.64; ring.rotation.x = Math.PI / 2; g.add(ring);
+    missionRoot.add(g);
+    registerInteractive(g, 'attic_up', isMobile ? 'Открыть люк' : 'E — Открыть люк на чердак');
+  }
+
+  /* ═══════ THE FLOOR SAFE (child's room, under a loose plank) ═══════ */
+  {
+    const safeG = new THREE.Group(); safeG.position.set(O - 6, Fs, -5.6);
+    const recess = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.5, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0x070707, roughness: 1 }));
+    recess.position.y = -0.2; safeG.add(recess);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.42, 0.52),
+      new THREE.MeshStandardMaterial({ color: 0x303438, roughness: 0.45, metalness: 0.75 }));
+    body.position.y = -0.16; safeG.add(body);
+    // safe lid (door) + keypad detail
+    safeDoorMesh = new THREE.Group(); safeDoorMesh.position.y = 0.06;
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.06, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x3a3e42, roughness: 0.4, metalness: 0.8 }));
+    safeDoorMesh.add(lid);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.02, 0.34),
+      new THREE.MeshStandardMaterial({ color: 0x101418, roughness: 0.5 }));
+    pad.position.set(0, 0.04, 0); safeDoorMesh.add(pad);
+    const padScr = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.01, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x113322, emissive: 0x00ff88, emissiveIntensity: 0.6 }));
+    padScr.position.set(0, 0.055, -0.08); safeDoorMesh.add(padScr);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+      const k = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.04),
+        new THREE.MeshStandardMaterial({ color: 0x2a3038, roughness: 0.6 }));
+      k.position.set(-0.05 + c * 0.05, 0.055, 0.02 + r * 0.045); safeDoorMesh.add(k);
     }
+    safeG.add(safeDoorMesh);
+    // loot inside (revealed after cracking)
+    safeLootGroup = new THREE.Group(); safeLootGroup.position.y = -0.08; safeLootGroup.visible = false;
+    for (let i = 0; i < 3; i++) {
+      const cash = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.22),
+        new THREE.MeshStandardMaterial({ color: 0x3a6b40, roughness: 0.8 }));
+      cash.position.set(0, 0.04 + i * 0.075, -0.1); safeLootGroup.add(cash);
+    }
+    [[0.16, 0xff3060], [-0.14, 0x30a0ff], [0.0, 0x40ff90]].forEach(([gx, gc]) => {
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.05, 0),
+        new THREE.MeshStandardMaterial({ color: gc, emissive: gc, emissiveIntensity: 0.7,
+          roughness: 0.1, metalness: 0.3 }));
+      gem.position.set(gx, 0.12, 0.14); safeLootGroup.add(gem);
+    });
+    safeG.add(safeLootGroup);
+    // loose plank on top (raised + tint) + golden glint seam
+    safePlank = new THREE.Group(); safePlank.position.set(0, 0.16, 0);
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.05, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0x4a3622, roughness: 0.8 }));
+    safePlank.add(plank);
+    safePlank.rotation.z = 0.07;                              // tilted up — "немного видно"
+    const glint = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.02, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0xffb000, emissiveIntensity: 0.9,
+        roughness: 0.3, metalness: 0.6 }));
+    glint.position.set(0, 0.03, 0.17); safePlank.add(glint);  // the glint
+    safeG.add(safePlank);
+    // neighbouring static planks (floorboard pattern)
+    [-0.35, 0.35, 0.7, -0.7].forEach(zz =>
+      B(0.92, 0.04, 0.28, -6, Fs + 0.155, -5.6 + zz, new THREE.MeshStandardMaterial(
+        { color: 0x33260f, roughness: 0.85 })));
+    missionRoot.add(safeG);
+    registerInteractive(safeG, 'safe', isMobile ? 'Осмотреть пол' : 'E — Осмотреть половицу');
+  }
+
+  /* ═══════ COLLECTIBLES ═══════ */
+  function addCollectible(tag, value, label, x, y, z, buildFn) {
+    const g = new THREE.Group(); g.position.set(O + x, y, z);
+    buildFn(g); missionRoot.add(g);
+    activeCollectibles.set(tag, { group: g, value });
+    registerInteractive(g, tag, isMobile ? label : 'E — ' + label);
+  }
+  const scr   = (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, roughness: 0.4 });
+  const solid = (c, r = 0.5, m = 0.2) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+  const box   = (g, w, h, d, m, x = 0, y = 0, z = 0) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; g.add(b); return b; };
+
+  // --- living / dining / kitchen (ground) ---
+  addCollectible('collect_tv', 1200, 'Украсть телевизор', -8.55, 1.35, 2.0, g => {
+    box(g, 0.06, 0.92, 1.65, solid(0x0a0a0a, 0.3)); box(g, 0.02, 0.84, 1.5, scr(0x223355), 0.05);
+    g.rotation.y = Math.PI / 2;
+  });
+  addCollectible('collect_soundbar', 400, 'Украсть саундбар', -8.5, 0.78, 2.0, g => {
+    box(g, 0.1, 0.1, 1.3, solid(0x161616, 0.6)); g.rotation.y = Math.PI / 2;
+  });
+  addCollectible('collect_console', 500, 'Украсть консоль', -8.5, 0.6, 2.7, g => {
+    box(g, 0.3, 0.07, 0.3, solid(0x111111, 0.4)); box(g, 0.05, 0.02, 0.25, scr(0x3070ff), 0, 0.045);
+  });
+  addCollectible('collect_vr', 800, 'Украсть VR-шлем', -5, 0.52, 2.4, g => {
+    box(g, 0.34, 0.18, 0.2, solid(0xdddddd, 0.5)); box(g, 0.3, 0.1, 0.02, scr(0x111133), 0, 0, 0.1);
+  });
+  addCollectible('collect_speaker', 250, 'Украсть умную колонку', -1.0, 0.86, 4.65, g => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 16), solid(0x222428, 0.7)); b.castShadow = true; g.add(b);
+  });
+  addCollectible('collect_laptop', 1000, 'Украсть ноутбук', -0.4, 0.84, 1.2, g => {
+    box(g, 0.5, 0.03, 0.34, solid(0x777b80, 0.4, 0.5));
+    const s = box(g, 0.48, 0.32, 0.02, scr(0x223344), 0, 0.17, -0.16); s.rotation.x = -0.4;
+  });
+  addCollectible('collect_tablet', 400, 'Украсть планшет', 0.6, 0.82, 0.6, g => {
+    box(g, 0.32, 0.02, 0.24, solid(0x111111, 0.3)); box(g, 0.28, 0.005, 0.2, scr(0x2a4a6a), 0, 0.014);
+  });
+  addCollectible('collect_painting', 2000, 'Украсть картину', -5.0, 2.2, 4.86, g => {
+    box(g, 1.2, 0.9, 0.05, solid(0x3a2a14, 0.6)); box(g, 1.0, 0.72, 0.02, solid(0x556644, 0.7), 0, 0, 0.03);
+  });
+  addCollectible('collect_vase', 1100, 'Украсть антикварную вазу', -1.4, 1.05, 4.65, g => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 0.4, 14), solid(0x2a6a8a, 0.3, 0.4)); b.castShadow = true; g.add(b);
+  });
+  addCollectible('collect_figurine', 900, 'Украсть золотую статуэтку', -0.6, 1.0, 4.65, g => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.34, 8), solid(0xffcc44, 0.2, 0.9)); b.castShadow = true; g.add(b);
+    box(g, 0.16, 0.04, 0.16, solid(0xccaa33, 0.3, 0.8), 0, -0.17);
+  });
+  addCollectible('collect_coffee', 250, 'Украсть кофемашину', 7.5, 1.13, 4.5, g => {
+    box(g, 0.26, 0.34, 0.28, solid(0x161616, 0.5)); box(g, 0.18, 0.04, 0.02, scr(0x00ff88), 0, 0.08, 0.15);
+  });
+  addCollectible('collect_microwave', 200, 'Украсть микроволновку', 8.1, 1.16, 3.5, g => {
+    box(g, 0.5, 0.3, 0.36, solid(0xcccccc, 0.4, 0.3)); box(g, 0.32, 0.2, 0.01, scr(0x221100), -0.06, 0, 0.185);
+  });
+  addCollectible('collect_mixer', 150, 'Украсть миксер', 6.8, 1.12, 4.5, g => {
+    box(g, 0.18, 0.3, 0.18, solid(0xcc3333, 0.4)); box(g, 0.2, 0.06, 0.2, solid(0xaa2222, 0.4), 0, -0.16);
+  });
+  addCollectible('collect_silver', 700, 'Украсть столовое серебро', 5.0, 1.0, 1.2, g => {
+    box(g, 0.34, 0.06, 0.24, solid(0x4a2c12, 0.6)); box(g, 0.3, 0.03, 0.2, solid(0xcccccc, 0.2, 0.9), 0, 0.04);
+  });
+  addCollectible('collect_wine', 300, 'Украсть вино', 8.2, 1.12, 1.0, g => {
+    [-0.12, 0, 0.12].forEach(zx => { const b = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.34, 10), solid(0x14260f, 0.3)); b.position.x = zx; b.castShadow = true; g.add(b); });
+  });
+  addCollectible('collect_jar', 150, 'Украсть банку с мелочью', -8.4, 0.3, -4.6, g => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14),
+      new THREE.MeshStandardMaterial({ color: 0xbbaa66, transparent: true, opacity: 0.5, roughness: 0.2 })); b.castShadow = true; g.add(b);
   });
 
-  // PC setup on office desk
-  addCollectible('collect_pc', 1200, 'Компьютер', 5.0, FY + 0.8, -6.2, g => {
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.35), plasticM);
-    tower.position.set(-0.55, 0.25, 0.05); g.add(tower);
-    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.38, 0.04), plasticM);
-    monitor.position.set(0.15, 0.22, 0); g.add(monitor);
-    const mscreen = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.32, 0.02), screenGlowM);
-    mscreen.position.set(0.15, 0.22, 0.03); g.add(mscreen);
+  // --- master bedroom (floor1) ---
+  addCollectible('collect_watch', 1200, 'Украсть часы', -7.0, 4.24, 4.55, g => {
+    box(g, 0.1, 0.03, 0.1, solid(0xffcc44, 0.2, 0.9)); box(g, 0.04, 0.01, 0.18, solid(0x2a1a0a, 0.6), 0, 0.01);
+  });
+  addCollectible('collect_necklace', 1200, 'Украсть колье', -7.3, 4.23, 4.55, g => {
+    const b = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 8, 18), solid(0xffd24a, 0.2, 0.9));
+    b.rotation.x = -Math.PI / 2; b.castShadow = true; g.add(b);
+  });
+  addCollectible('collect_ring', 1500, 'Украсть кольцо с бриллиантом', -3.1, 3.98, 3.3, g => {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 8, 16), solid(0xffe080, 0.2, 0.95));
+    r.castShadow = true; g.add(r);
+    box(g, 0.025, 0.025, 0.025, new THREE.MeshStandardMaterial({ color: 0xcfeaff, emissive: 0x88bbff, emissiveIntensity: 0.6, roughness: 0.05 }), 0, 0.03);
+  });
+  addCollectible('collect_earrings', 800, 'Украсть серьги', -6.7, 4.23, 4.55, g => {
+    [-0.05, 0.05].forEach(ex => box(g, 0.02, 0.06, 0.02, solid(0xffd24a, 0.2, 0.9), ex));
+  });
+  addCollectible('collect_jewelbox', 600, 'Украсть шкатулку', -7.0, 4.28, 4.1, g => {
+    box(g, 0.24, 0.12, 0.18, solid(0x5a2a12, 0.5)); box(g, 0.2, 0.03, 0.14, solid(0x884422, 0.4), 0, 0.07);
+  });
+  addCollectible('collect_camera', 700, 'Украсть фотоаппарат', -8.5, 4.55, 1.0, g => {
+    box(g, 0.26, 0.16, 0.14, solid(0x161616, 0.4));
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 14), solid(0x0a0a0a, 0.3, 0.4));
+    l.rotation.x = Math.PI / 2; l.position.z = 0.1; g.add(l);
+  });
+  addCollectible('collect_perfume', 200, 'Украсть духи', -6.6, 4.25, 4.65, g => {
+    box(g, 0.07, 0.14, 0.07, new THREE.MeshStandardMaterial({ color: 0xff88bb, transparent: true, opacity: 0.6, roughness: 0.1 }));
+    box(g, 0.04, 0.04, 0.04, solid(0xffcc44, 0.3, 0.7), 0, 0.09);
   });
 
-  // Tablet on office desk
-  addCollectible('collect_tablet', 400, 'Планшет', 4.2, FY + 0.78, -5.9, g => {
-    const t = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.015), plasticM);
-    g.add(t);
-    const ts = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.18, 0.01), screenGlowM);
-    ts.position.z = 0.01; g.add(ts);
+  // --- office (floor1) ---
+  addCollectible('collect_pc', 2500, 'Украсть игровой ПК', 6.0, 3.95, -5.0, g => {
+    box(g, 0.4, 0.7, 0.5, solid(0x111114, 0.4, 0.3));
+    box(g, 0.02, 0.5, 0.4, scr(0xaa33ff), 0.21); box(g, 0.3, 0.04, 0.02, scr(0x33aaff), 0, 0.25, 0.255);
+  });
+  addCollectible('collect_monitor', 600, 'Украсть монитор', 6.0, 4.15, -5.85, g => {
+    box(g, 0.86, 0.5, 0.04, solid(0x0a0a0a, 0.3)); box(g, 0.8, 0.44, 0.01, scr(0x224466), 0, 0, 0.03);
+    box(g, 0.16, 0.18, 0.1, solid(0x161616, 0.5), 0, -0.32);
+  });
+  addCollectible('collect_drone', 1200, 'Украсть дрон', 8.3, 4.6, -3.0, g => {
+    box(g, 0.24, 0.05, 0.24, solid(0x161616, 0.4));
+    [[-0.16,-0.16],[0.16,-0.16],[-0.16,0.16],[0.16,0.16]].forEach(([px,pz])=>{ const b=new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08,0.08,0.01,12), solid(0x222222,0.5)); b.position.set(px,0.03,pz); g.add(b); });
+  });
+  addCollectible('collect_headphones', 300, 'Украсть наушники', 5.0, 3.95, -5.5, g => {
+    const b = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 8, 18, Math.PI), solid(0x222428, 0.6));
+    b.castShadow = true; g.add(b); [-0.1, 0.1].forEach(ex => box(g, 0.06, 0.08, 0.06, solid(0x161616, 0.6), ex, -0.04));
+  });
+  addCollectible('collect_ereader', 200, 'Украсть электронную книгу', 6.8, 3.95, -5.4, g => {
+    box(g, 0.2, 0.02, 0.28, solid(0x444444, 0.4)); box(g, 0.17, 0.005, 0.24, scr(0xbbbbaa), 0, 0.014);
   });
 
-  // Phone in children's room
-  addCollectible('collect_phone', 350, 'Смартфон', -3.0, FY + 0.72, -6.4, g => {
-    const ph = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.175, 0.012), plasticM);
-    g.add(ph);
-    const ps = new THREE.Mesh(new THREE.BoxGeometry(0.077, 0.155, 0.008),
-      new THREE.MeshStandardMaterial({ color: 0x001122, emissive: 0x1144aa, emissiveIntensity: 0.5 }));
-    ps.position.z = 0.01; g.add(ps);
+  // --- bathroom (floor1) ---
+  addCollectible('collect_hairdryer', 100, 'Украсть фен', 3.0, 4.0, 4.5, g => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 12), solid(0xdd55aa, 0.5));
+    b.rotation.z = Math.PI / 2; b.castShadow = true; g.add(b);
+    box(g, 0.04, 0.12, 0.04, solid(0xcc4499, 0.5), 0.06, -0.08);
   });
 
-  // Camera on bedroom shelf
-  addCollectible('collect_camera', 600, 'Фотоаппарат', -4.3, FY + 0.82, 3.25, g => {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.1), plasticM);
-    g.add(body);
-    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 8), metalMat);
-    lens.rotation.x = Math.PI / 2; lens.position.set(0, 0, -0.08); g.add(lens);
+  // --- child's room (floor1) ---
+  addCollectible('collect_phone', 350, 'Украсть смартфон', -2.5, 3.96, -2.5, g => {
+    box(g, 0.14, 0.02, 0.28, solid(0x111111, 0.3)); box(g, 0.11, 0.005, 0.24, scr(0x3a6a9a), 0, 0.014);
+  });
+  addCollectible('collect_handheld', 250, 'Украсть портативную консоль', -8.2, 3.93, -4.6, g => {
+    box(g, 0.34, 0.03, 0.16, solid(0x2233aa, 0.4)); box(g, 0.16, 0.005, 0.12, scr(0x66ccff), 0, 0.018);
+  });
+  addCollectible('collect_dino', 400, 'Украсть золотого динозавра', -3.0, 4.33, -6.5, g => {
+    box(g, 0.1, 0.16, 0.26, solid(0xffcc44, 0.2, 0.9)); box(g, 0.08, 0.1, 0.06, solid(0xffcc44, 0.2, 0.9), 0, 0.13, 0.1);
+    box(g, 0.06, 0.12, 0.06, solid(0xffcc44, 0.2, 0.9), 0, -0.1, -0.08);
   });
 
-  // Ring in bedroom
-  addCollectible('collect_ring', 1500, 'Кольцо с бриллиантом', -4.8, FY + 0.29, 1.4, g => {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 6, 16), valueMat);
-    ring.rotation.x = Math.PI / 2; g.add(ring);
-    const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.02), gemMat);
-    diamond.position.y = 0.03; g.add(diamond);
+  // --- hidden stashes (count toward money) ---
+  addCollectible('collect_couchcash', 300, 'Забрать пачку под подушкой', -4.3, 0.62, 4.3, g => {
+    box(g, 0.2, 0.05, 0.12, solid(0x3a6b40, 0.8)); box(g, 0.19, 0.012, 0.11, solid(0x4a7a50, 0.8), 0, 0.03);
+  });
+  addCollectible('collect_envelope', 400, 'Забрать конверт с деньгами', 5.5, 1.0, 4.5, g => {
+    box(g, 0.24, 0.02, 0.16, solid(0xe8e0c8, 0.9)); g.rotation.y = 0.3;
+  });
+  addCollectible('collect_bookmoney', 250, 'Забрать деньги из книги', 8.3, 4.42, -5.0, g => {
+    box(g, 0.06, 0.22, 0.3, solid(0x3a2a5a, 0.7)); box(g, 0.1, 0.04, 0.24, solid(0x4a7a50, 0.8), 0.04, 0, 0);
+  });
+  addCollectible('collect_piggy', 500, 'Разбить копилку', -3.0, 3.9, -2.0, g => {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 12), solid(0xff88bb, 0.5)); b.scale.set(1.3, 1, 1); b.castShadow = true; g.add(b);
+    box(g, 0.04, 0.06, 0.04, solid(0xff88bb, 0.5), 0, 0.13);
+  });
+  addCollectible('collect_atticstash', 600, 'Забрать заначку', -5.0, 6.45, -5.5, g => {
+    box(g, 0.3, 0.12, 0.22, solid(0x3a2a14, 0.7)); box(g, 0.26, 0.05, 0.18, solid(0x3a6b40, 0.8), 0, 0.08);
   });
 
-  // ── HIDDEN STASHES ────────────────────────────────────────
-  // Cash under couch (very small, tucked under)
-  addCollectible('collect_stash_couch', 200, '💰 Наличные', -4.0, 0.04, -3.0, g => {
-    const env = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x3a2a00, roughness: 0.9 }));
-    g.add(env);
-    g.scale.setScalar(0.6);
-  });
+  /* ═══════ HINTS (readable clue objects) ═══════ */
+  function addHint(tag, x, y, z, w, h, color, rotY) {
+    const g = new THREE.Group(); g.position.set(O + x, y, z); if (rotY) g.rotation.y = rotY;
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02),
+      new THREE.MeshStandardMaterial({ color: color, roughness: 0.9 }));
+    g.add(panel);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(w * 0.82, h * 0.16, 0.025),
+      new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.8 }));
+    trim.position.y = h * 0.34; g.add(trim);
+    missionRoot.add(g);
+    registerInteractive(g, tag, isMobile ? '📄 Прочитать' : 'E — Прочитать');
+  }
+  // 1. fridge note (kitchen, on fridge, ground)
+  addHint('hint_fridge', 8.0, 1.4, 2.0, 0.34, 0.42, 0xfff4a8, Math.PI / 2);
+  // 2. wall calendar (kitchen east wall, ground)
+  addHint('hint_calendar', 8.9, 1.8, 0.0, 0.5, 0.6, 0xfafafa, -Math.PI / 2);
+  // 3. crayon drawing (child's room west wall, floor1)
+  addHint('hint_drawing', -8.9, 4.3, -3.0, 0.5, 0.4, 0xfffdf5, Math.PI / 2);
+  // 4. dad's sticky note (office desk, floor1)
+  addHint('hint_dadnote', 6.5, 3.78, -5.5, 0.22, 0.22, 0xfff088, 0);
+  // 5. forum printout (office shelf, floor1) — MISDIRECTION
+  addHint('hint_forum', 8.05, 4.5, -4.0, 0.34, 0.44, 0x11151c, -Math.PI / 2);
+  // 6. diary under pillow (child's bunk, floor1)
+  addHint('hint_diary', -8.2, 3.98, -6.0, 0.3, 0.22, 0x2b4ea0, 0);
+  // 7. dino poster (child's room west wall, floor1)
+  addHint('hint_poster', -8.9, 4.7, -5.5, 0.6, 0.85, 0xe8e0c8, Math.PI / 2);
+  // 8. attic note (on a box, attic) — confirms misdirection dead-end
+  addHint('hint_atticnote', -5.0, 6.62, -3.0, 0.34, 0.28, 0xe8e0c8, 0);
+  // 9. framed photo (master bedroom, floor1)
+  addHint('hint_photo', -8.9, 4.6, 2.0, 0.5, 0.4, 0x2a2620, Math.PI / 2);
+  // 10. nursery certificate (child's room south wall, floor1)
+  addHint('hint_certificate', -3.5, 4.5, -6.88, 0.5, 0.42, 0xf5f0e0, 0);
 
-  // Cash packet in kitchen cabinet (behind counter, needs to look behind)
-  addCollectible('collect_stash_kitchen', 350, '💰 Пакет с деньгами', 7.5, 0.5, -6.3, g => {
-    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0x1a3300, roughness: 0.9 }));
-    g.add(bag);
-    g.scale.setScalar(0.55);
-  });
-
-  // Safe hidden behind wardrobe on second floor
-  addCollectible('collect_stash_safe', 3000, '🔒 Сейф', -7.0, FY + 0.4, 0.8, g => {
-    const safe = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.35), metalMat);
-    g.add(safe);
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.46, 0.04), metalMat);
-    door.position.set(0, 0, 0.195); g.add(door);
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03),
-      new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.1, metalness: 1 }));
-    handle.position.set(0.1, 0, 0.22); g.add(handle);
-    g.scale.setScalar(0.7);
-  });
-
-  // Piggy bank in children's closet
-  addCollectible('collect_stash_piggy', 500, '🐷 Копилка', -7.2, FY + 0.42, -6.5, g => {
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6),
-      new THREE.MeshStandardMaterial({ color: 0xff88aa, roughness: 0.7 }));
-    g.add(body);
-    const snout = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4),
-      new THREE.MeshStandardMaterial({ color: 0xff99bb, roughness: 0.6 }));
-    snout.position.set(0, -0.01, 0.09); g.add(snout);
-    g.scale.setScalar(0.7);
-  });
-
-  // Money in book on office shelf
-  addCollectible('collect_stash_book', 250, '💵 Деньги в книге', 7.3, FY + 0.65, -4.5, g => {
-    const book = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.22),
-      new THREE.MeshStandardMaterial({ color: 0x0a1a0a, roughness: 0.85 }));
-    g.add(book);
-    g.scale.setScalar(0.65);
-  });
-
-  // ── Interior colliders (outer boundary walls) ────────────
-  interiorColliders = [
-    { minX: HOUSE_OFFSET + 7.7,  maxX: HOUSE_OFFSET + 20, minZ: -8, maxZ: 5 },  // east wall
-    { minX: HOUSE_OFFSET - 20,   maxX: HOUSE_OFFSET - 7.7, minZ: -8, maxZ: 5 }, // west wall
-    { minX: HOUSE_OFFSET - 9,    maxX: HOUSE_OFFSET + 9, minZ: -7.3, maxZ: -20 }, // south wall
-    { minX: HOUSE_OFFSET - 9,    maxX: HOUSE_OFFSET + 9, minZ:  3.3, maxZ: 20 }, // north wall
-  ];
-
-  buildRaycastTargets();
+  /* ═══════ EXIT DOOR (interior face, north wall) ═══════ */
+  {
+    const g = new THREE.Group(); g.position.set(O + 0, 0, 4.86);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.1, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 0.85 }));
+    door.position.y = 1.05; g.add(door);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(1.14, 2.22, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x241a10, roughness: 0.8 }));
+    frame.position.set(0, 1.11, -0.03); g.add(frame);
+    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), metalM);
+    handle.position.set(0.36, 1.05, 0.06); g.add(handle);
+    missionRoot.add(g);
+    registerInteractive(g, 'exit_door', isMobile ? 'Выйти из дома' : 'E — Выйти из дома');
+  }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   SECTION 10c — Merge mission statics (skips interactive groups)
+═══════════════════════════════════════════════════════════ */
+function mergeMissionStatics() {
+  missionRoot.updateMatrixWorld(true);
+  const byMat = new Map();
+  missionRoot.traverse(obj => {
+    if (!obj.isMesh) return;
+    if (hasNoMergeAncestor(obj)) return;        // interactive / highlightable objects
+    if (!obj.geometry || !obj.geometry.attributes.position) return;
+    const key = obj.material.uuid;
+    if (!byMat.has(key)) byMat.set(key, { mat: obj.material, list: [] });
+    byMat.get(key).list.push(obj);
+  });
+  for (const { mat, list } of byMat.values()) {
+    if (list.length < 2) continue;
+    const geos = list.map(o => { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); return g; });
+    const merged = mergeGeometries(geos, false);
+    geos.forEach(g => g.dispose());
+    if (!merged) continue;
+    const mesh = new THREE.Mesh(merged, mat);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    missionRoot.add(mesh);                        // child of missionRoot → visibility toggles with it
+    list.forEach(o => { o.removeFromParent(); o.geometry.dispose(); });
+  }
+}
 // Mission runtime state
 let missionActive = false;
-let missionTimeSec = 180, missionMoney = 0, missionStashFound = false;
+let missionTimeSec = 480, missionMoney = 0, missionStashFound = false;
 let missionTimerHandle = null;
 
 // House interior state
 let doorUnlocked  = false;
 let insideHouse   = false;
-let currentFloor  = 0;
-const glowLightRegistry  = new Map(); // tag → PointLight
-const activeCollectibles = new Map(); // tag → { group, value }
+let currentFloor  = 0;                  // 0 ground, 1 upstairs, 2 attic
+const activeCollectibles = new Map();   // tag → { group, value }
 const collectedItems     = new Set();
 let lockpickInterval = null;
 const pinStates = Array.from({length:5}, (_,i) => ({
   y: 0, dir: 1, speed: 0.38 + i * 0.09, set: false
 }));
-let interiorColliders = [];
+// per-floor collider sets (floors stack in Y, collisions are XZ-only → swap on transition)
+let collF0 = [], collF1 = [], collAttic = [];
 const HOUSE_OFFSET = 200;
+
+// Floor safe
+const SAFE_CODE   = '1407';             // Тёма's birthday: 14 July (DDMM)
+const SAFE_REWARD = 10000;
+let safeCracked = false, plankPried = false, keypadEntry = '';
+let safePlank, safeDoorMesh, safeLootGroup;
+
+// Prop tweens (e.g. sliding the loose plank) — processed in the animate loop
+const propTweens = [];
+function slideProp(group, to, toRotZ, dur, onDone) {
+  propTweens.push({ group, from: group.position.clone(), to,
+    fromRotZ: group.rotation.z, toRotZ, t: 0, dur, onDone });
+}
+
+// Hint texts (paper / kid / sticky / calendar / screen variants)
+const HINTS = {
+  hint_fridge: { variant: 'sticky', title: 'Записка на холодильнике',
+    body: 'Тёма, солнышко!\nЯ на работе до вечера. Обед в микроволновке.\n\nИ ещё раз: НЕ лазь под половицу у себя в комнате и НЕ открывай люк на чердак — там пыльно и опасно. Папа потом сам разберётся.\n\nЦелую, мама ❤️' },
+  hint_calendar: { variant: 'calendar', title: 'ИЮЛЬ',
+    body: 'Числа... 12  13  ⟨14⟩  15  16\n\nВокруг 14-го жирный красный кружок и звезда:\n\n🦕  ДЕНЬ РОЖДЕНИЯ ТЁМЫ!  🎂\n«Нашему сыночку — 7 ЛЕТ!»' },
+  hint_drawing: { variant: 'kid', title: 'Детский рисунок',
+    body: 'Кривым карандашом нарисован динозавр в праздничном колпаке и торт с свечками.\n\nПодпись огромными буквами:\n«МНЕ СКОРО БУДЕТ 7! 🦖»' },
+  hint_dadnote: { variant: 'sticky', title: 'Стикер (почерк папы)',
+    body: 'НЕ ЗАБЫТЬ.\nКод от напольного сейфа = день рождения Тёмы.\nСначала ДЕНЬ, потом МЕСЯЦ. Четыре цифры.\n\n(перепрятал из ящика, тут надёжнее)' },
+  hint_forum: { variant: 'screen', title: 'forum-kladoiskatel.ru — распечатка',
+    body: '> аноним: слышал в этом районе кто-то прятал «легендарный кейс» с камнями\n> user_77: 100% на ЧЕРДАКЕ прячут, всегда там\n> аноним: ага, лезь проверяй ))\n\n(кто-то от руки дописал в углу: «проверил — пусто, чушь»)' },
+  hint_diary: { variant: 'kid', title: 'Дневничок Тёмы',
+    body: 'Сегодня видел как папа ОТОДВИГАЛ доску в полу!! Прямо у моей кровати, у окна. Что-то туда спрятал.\n\nЯ подсмотрел: там железная дверца и кнопочки. И ещё чуть-чуть БЛЕСТИТ из щели. Это наверное СОКРОВИЩЕ!!!' },
+  hint_poster: { variant: 'paper', title: 'Постер «Динозавры»',
+    body: 'Большой плакат: T-REX — КОРОЛЬ ДИНОЗАВРОВ.\n\nНа полях детским почерком приписано фломастером:\n«14.07 — МОЙ ДЕНЬ! будет 7!»' },
+  hint_atticnote: { variant: 'paper', title: 'Записка на коробке',
+    body: 'Рукой папы:\n«Тут только старые ёлочные игрушки и хлам. Никаких сейфов. Хватит сюда лазить.»' },
+  hint_photo: { variant: 'paper', title: 'Фото в рамке',
+    body: 'Семейное фото у торта с динозавром. На латунной табличке выгравировано:\n\n«Нашему Тёме — 14 июля»' },
+  hint_certificate: { variant: 'paper', title: 'Справка из садика',
+    body: 'ДЕТСКИЙ САД №7\n\nВоспитанник: Артём (Тёма)\nГруппа: №7 «Динозаврики»\nДата рождения: 14.07' },
+};
 
 function startMissionTimer() {
   missionTimerHandle = setInterval(() => {
@@ -1998,18 +2370,19 @@ async function startMission() {
   missionCollidersList.forEach(c => colliders.push(c));
   roomBounds = { minX: -12, maxX: 12, minZ: -12, maxZ: 12 };
 
-  playerRig.position.set(2.2, CFG.playerHeight, 5.0);
-  playerRig.rotation.y = Math.PI;
+  playerRig.position.set(2.5, CFG.playerHeight, 4.0);
+  playerRig.rotation.y = 0;                 // face -Z, toward the car & house
   camera.rotation.x = 0;
 
   gameState = STATE.MISSION;
   missionActive = true;
-  missionTimeSec = 180; missionMoney = 0; missionStashFound = false;
+  missionTimeSec = 480; missionMoney = 0; missionStashFound = false;
+  safeCracked = false; plankPried = false; keypadEntry = '';
 
   await fadeIn(700);
 
   document.getElementById('mission-hud').style.display = 'block';
-  document.getElementById('hud-timer').textContent = '03:00';
+  document.getElementById('hud-timer').textContent = '08:00';
   document.getElementById('hud-money').textContent = '0$ / 20 000$';
   document.getElementById('hud-stash').textContent = '❌';
   startMissionTimer();
@@ -2018,12 +2391,34 @@ async function startMission() {
 }
 
 async function endMission() {
+  if (!missionActive) return;
   stopMissionTimer();
   missionActive = false;
   document.getElementById('car-menu').style.display = 'none';
   document.getElementById('mission-hud').style.display = 'none';
+  if (document.pointerLockElement) document.exitPointerLock();
+  setHandVisible(false);
+  showMissionReport();
+}
 
-  await fadeOut(700);
+function showMissionReport() {
+  const goalMet = missionMoney >= 20000;
+  const safeLine = safeCracked
+    ? '<div class="rp-badge win">🏆 Легендарный кейс найден — сейф взломан!</div>'
+    : '<div class="rp-badge miss">📦 Легендарный кейс не найден. Сейф остался цел.</div>';
+  document.getElementById('rp-lines').innerHTML =
+    `<div class="rp-line"><span>Награблено</span><span class="v">${missionMoney.toLocaleString()}$</span></div>` +
+    `<div class="rp-line"><span>Заказ</span><span class="v">20 000$</span></div>` +
+    safeLine +
+    `<div class="rp-div"></div>` +
+    `<div class="rp-line rp-total"><span>${goalMet ? 'Заказ выполнен ✓' : 'Заказ провален'}</span><span class="v">${missionMoney.toLocaleString()}$</span></div>`;
+  document.getElementById('report-overlay').classList.add('active');
+  document.getElementById('mobile-ui').style.display = 'none';
+}
+
+async function finishReport() {
+  document.getElementById('report-overlay').classList.remove('active');
+  await fadeOut(600);
 
   missionRoot.visible = false;
   hubSceneNodes.forEach(o => { o.visible = true; });
@@ -2036,6 +2431,17 @@ async function endMission() {
   collectedItems.clear();
   activeCollectibles.forEach(info => { info.group.visible = true; });
 
+  // reset safe to its initial covered state
+  if (safeDoorMesh)  safeDoorMesh.visible = true;
+  if (safeLootGroup) safeLootGroup.visible = false;
+  if (safePlank)   { safePlank.position.set(0, 0.16, 0); safePlank.rotation.z = 0.07; }
+  safeCracked = false; plankPried = false; keypadEntry = '';
+  propTweens.length = 0;
+  interactiveRegistry.forEach(e => {
+    if (e.tag === 'door') e.label = isMobile ? 'Взломать замок' : 'E — Взломать замок';
+    if (e.tag === 'safe') e.label = isMobile ? 'Осмотреть пол' : 'E — Осмотреть половицу';
+  });
+
   colliders.length = 0;
   hubColliders.forEach(c => colliders.push(c));
   roomBounds = { minX: -4.5, maxX: 4.5, minZ: -4.5, maxZ: 4.5 };
@@ -2044,11 +2450,13 @@ async function endMission() {
   playerRig.rotation.y = 0;
   camera.rotation.x = 0;
   gameState = STATE.EXPLORING;
+  if (isMobile) document.getElementById('mobile-ui').style.display = 'block';
 
-  await fadeIn(700);
+  await fadeIn(600);
   setHandVisible(true);
   if (!isMobile) canvas.requestPointerLock();
 }
+window.finishReport = finishReport;
 
 function handleCar() {
   if (tweenState.active) return;
@@ -2152,10 +2560,10 @@ async function enterHouse() {
   await fadeOut(400);
   insideHouse = true; currentFloor = 0;
   colliders.length = 0;
-  interiorColliders.forEach(c => colliders.push(c));
-  roomBounds = { minX: HOUSE_OFFSET - 9, maxX: HOUSE_OFFSET + 9, minZ: -8, maxZ: 4 };
-  playerRig.position.set(HOUSE_OFFSET, CFG.playerHeight, 2.0);
-  playerRig.rotation.y = Math.PI;
+  collF0.forEach(c => colliders.push(c));
+  roomBounds = { minX: HOUSE_OFFSET - 9, maxX: HOUSE_OFFSET + 9, minZ: -7, maxZ: 5 };
+  playerRig.position.set(HOUSE_OFFSET + 0, CFG.playerHeight, 4.2);
+  playerRig.rotation.y = 0;                 // look -Z into the great room
   camera.rotation.x = 0;
   await fadeIn(400);
 }
@@ -2168,28 +2576,125 @@ async function exitHouse() {
   missionCollidersList.forEach(c => colliders.push(c));
   roomBounds = { minX: -12, maxX: 12, minZ: -12, maxZ: 12 };
   playerRig.position.set(0, CFG.playerHeight, -4.0);
-  playerRig.rotation.y = 0;
+  playerRig.rotation.y = Math.PI;           // face the car / street
   camera.rotation.x = 0;
   await fadeIn(400);
 }
 
-// ── Staircase handler ───────────────────────────────────────
-function handleStairs() {
-  if (currentFloor === 0) {
-    currentFloor = 1;
-    playerRig.position.set(HOUSE_OFFSET - 1, 4 + CFG.playerHeight, -1.5);
-  } else {
-    currentFloor = 0;
-    playerRig.position.set(HOUSE_OFFSET - 1, CFG.playerHeight, 0.5);
-  }
-  interactiveRegistry.forEach(entry => {
-    if (entry.tag === 'stairs')
-      entry.label = currentFloor === 1
-        ? (isMobile ? 'Спуститься' : 'E — Спуститься')
-        : (isMobile ? 'Подняться'  : 'E — Подняться');
-  });
-  camera.rotation.x = 0;
+// ── Staircase / attic teleports (swap per-floor collider set) ─
+function setFloor(set, bounds, px, py, pz, yaw) {
+  colliders.length = 0; set.forEach(c => colliders.push(c));
+  roomBounds = bounds;
+  playerRig.position.set(px, py, pz);
+  playerRig.rotation.y = yaw; camera.rotation.x = 0;
 }
+const HOUSE_BOUNDS  = () => ({ minX: HOUSE_OFFSET - 9, maxX: HOUSE_OFFSET + 9, minZ: -7, maxZ: 5 });
+const ATTIC_BOUNDS  = () => ({ minX: HOUSE_OFFSET - 9, maxX: HOUSE_OFFSET - 3, minZ: -7, maxZ: -2 });
+function handleStairsUp()   { currentFloor = 1; setFloor(collF1, HOUSE_BOUNDS(), HOUSE_OFFSET + 0, 3.3 + CFG.playerHeight, -3.0, Math.PI); }
+function handleStairsDown() { currentFloor = 0; setFloor(collF0, HOUSE_BOUNDS(), HOUSE_OFFSET + 0, CFG.playerHeight,        -3.0, Math.PI); }
+function handleAtticUp()    { currentFloor = 2; setFloor(collAttic, ATTIC_BOUNDS(), HOUSE_OFFSET - 5.5, 6.3 + CFG.playerHeight, -4.5, 0); }
+function handleAtticDown()  { currentFloor = 1; setFloor(collF1, HOUSE_BOUNDS(), HOUSE_OFFSET - 5, 3.3 + CFG.playerHeight, -3.5, Math.PI); }
+
+// ── Toast / note / keypad helpers ───────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+function showNote(tag) {
+  const h = HINTS[tag]; if (!h) return;
+  const card = document.getElementById('note-card');
+  card.className = 'note-card ' + (h.variant || 'paper');
+  document.getElementById('note-title').textContent = h.title;
+  document.getElementById('note-body').textContent = h.body;
+  document.getElementById('note-overlay').classList.add('active');
+  gameState = STATE.MENU;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeNote() {
+  document.getElementById('note-overlay').classList.remove('active');
+  if (missionActive) { gameState = STATE.MISSION; if (!isMobile) canvas.requestPointerLock(); }
+}
+window.closeNote = closeNote;
+
+function playCreak() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(75, ctx.currentTime);
+    o.frequency.linearRampToValueAtTime(38, ctx.currentTime + 0.4);
+    g.gain.setValueAtTime(0.10, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.46);
+  } catch (e) {}
+}
+
+// ── Floor safe ──────────────────────────────────────────────
+function handleSafe() {
+  if (safeCracked) return;
+  if (!plankPried) {
+    plankPried = true;
+    slideProp(safePlank, new THREE.Vector3(0.02, 0.18, 0.62), 0.0, 0.5);  // slide loose plank aside
+    playCreak();
+    interactiveRegistry.forEach(e => { if (e.tag === 'safe')
+      e.label = isMobile ? 'Ввести код' : 'E — Ввести код'; });
+    setTimeout(openKeypad, 470);
+  } else {
+    openKeypad();
+  }
+}
+function openKeypad() {
+  keypadEntry = ''; updateKeypadDisplay();
+  const d = document.getElementById('kp-display'); d.classList.remove('bad', 'good');
+  document.getElementById('keypad-overlay').classList.add('active');
+  gameState = STATE.MENU;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeKeypad() {
+  document.getElementById('keypad-overlay').classList.remove('active');
+  if (missionActive) { gameState = STATE.MISSION; if (!isMobile) canvas.requestPointerLock(); }
+}
+window.closeKeypad = closeKeypad;
+function updateKeypadDisplay() {
+  document.getElementById('kp-display').textContent = keypadEntry.padEnd(4, '•');
+}
+function kpPress(dig) {
+  if (keypadEntry.length >= 4) return;
+  keypadEntry += dig; updateKeypadDisplay();
+  if (keypadEntry.length === 4) setTimeout(kpSubmit, 180);
+}
+function kpDel() { keypadEntry = keypadEntry.slice(0, -1); updateKeypadDisplay(); }
+function kpSubmit() {
+  const d = document.getElementById('kp-display');
+  if (keypadEntry === SAFE_CODE) {
+    d.classList.add('good');
+    setTimeout(() => { closeKeypad(); crackSafe(); }, 480);
+  } else {
+    d.classList.add('bad');
+    setTimeout(() => { d.classList.remove('bad'); keypadEntry = ''; updateKeypadDisplay(); }, 460);
+  }
+}
+function crackSafe() {
+  if (safeCracked) return;
+  safeCracked = true; missionStashFound = true;
+  if (safeDoorMesh)  safeDoorMesh.visible = false;
+  if (safeLootGroup) safeLootGroup.visible = true;
+  missionMoney += SAFE_REWARD;
+  document.getElementById('hud-money').textContent = `${missionMoney.toLocaleString()}$ / 20 000$`;
+  document.getElementById('hud-stash').textContent = '✓';
+  unlockedCount = Math.max(unlockedCount, 2);
+  showToast('🔓 Сейф взломан! Легендарный кейс найден (+' + SAFE_REWARD.toLocaleString() + '$)');
+  interactiveRegistry.forEach(e => { if (e.tag === 'safe')
+    e.label = isMobile ? 'Сейф пуст' : 'Сейф взломан'; });
+}
+document.querySelectorAll('#keypad-overlay .kp-key[data-d]').forEach(b =>
+  b.addEventListener('click', () => kpPress(b.dataset.d)));
+document.getElementById('kp-del').addEventListener('click', kpDel);
+document.getElementById('kp-enter').addEventListener('click', kpSubmit);
 
 // ── Collect handler ─────────────────────────────────────────
 function handleCollect(tag) {
@@ -2222,14 +2727,21 @@ function toggleFlashlight() {
 
 // ── Main interact dispatcher ────────────────────────────────
 function interact() {
+  if (gameState !== STATE.EXPLORING && gameState !== STATE.MISSION) return;
   if (!currentTarget || currentTarget.cooldown) return;
-  if (currentTarget.tag === 'chair')    handleChair();
-  if (currentTarget.tag === 'computer') handleComputer();
-  if (currentTarget.tag === 'car')      handleCar();
-  if (currentTarget.tag === 'door')     handleDoor();
-  if (currentTarget.tag === 'exit_door') exitHouse();
-  if (currentTarget.tag === 'stairs')   handleStairs();
-  if (currentTarget.tag.startsWith('collect_')) handleCollect(currentTarget.tag);
+  const t = currentTarget.tag;
+  if      (t === 'chair')       handleChair();
+  else if (t === 'computer')    handleComputer();
+  else if (t === 'car')         handleCar();
+  else if (t === 'door')        handleDoor();
+  else if (t === 'exit_door')   exitHouse();
+  else if (t === 'stairs_up')   handleStairsUp();
+  else if (t === 'stairs_down') handleStairsDown();
+  else if (t === 'attic_up')    handleAtticUp();
+  else if (t === 'attic_down')  handleAtticDown();
+  else if (t === 'safe')        handleSafe();
+  else if (t.startsWith('hint_'))    showNote(t);
+  else if (t.startsWith('collect_')) handleCollect(t);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2310,11 +2822,23 @@ function updateHandBob(delta) {
   handGroup.rotation.z  = 0.05 + Math.sin(handBobTime * 0.5) * 0.025;
 }
 
+function processPropTweens(delta) {
+  for (let i = propTweens.length - 1; i >= 0; i--) {
+    const p = propTweens[i];
+    p.t = Math.min(1, p.t + delta / p.dur);
+    const e = smoothstep(p.t);
+    p.group.position.lerpVectors(p.from, p.to, e);
+    p.group.rotation.z = lerp(p.fromRotZ, p.toRotZ, e);
+    if (p.t >= 1) { if (p.onDone) p.onDone(); propTweens.splice(i, 1); }
+  }
+}
+
 function animate() {
   const delta = Math.min(clock.getDelta(), 0.05);
 
   processMovement(delta);
   processTween(delta);
+  processPropTweens(delta);
 
   if (gameState === STATE.EXPLORING || gameState === STATE.MISSION) {
     updateInteractionSystem();

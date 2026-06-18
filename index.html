@@ -433,6 +433,52 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
   font-size: 14px; letter-spacing: 2px; transition: all 0.2s;
 }
 #rp-btn:hover { background: #0d2a1a; box-shadow: 0 0 20px rgba(0,255,136,0.25); }
+.rp-badge.caught { background: rgba(255,40,40,0.10); border: 1px solid #922; color: #ff6a6a; }
+
+/* ── Police alarm (final 30 seconds) ── */
+#alarm-vignette {
+  position: fixed; inset: 0; z-index: 40; pointer-events: none; display: none;
+  box-shadow: inset 0 0 140px 30px rgba(255,0,0,0.0);
+  animation: alarm-pulse 1s ease-in-out infinite;
+}
+#alarm-vignette.on { display: block; }
+@keyframes alarm-pulse {
+  0%,100% { box-shadow: inset 0 0 120px 20px rgba(255,0,0,0.18); }
+  50%     { box-shadow: inset 0 0 200px 60px rgba(255,0,0,0.45); }
+}
+#cop-timer {
+  position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+  z-index: 41; display: none; text-align: center; pointer-events: none;
+  font-family: 'Courier New', monospace;
+}
+#cop-timer.on { display: block; }
+#cop-timer .lbl {
+  color: #ff5a5a; font-size: 13px; letter-spacing: 3px; margin-bottom: 2px;
+  text-shadow: 0 0 10px rgba(255,0,0,0.8);
+}
+#cop-timer .num {
+  color: #ff2a2a; font-size: 48px; font-weight: bold; line-height: 1;
+  text-shadow: 0 0 18px rgba(255,0,0,0.9);
+  animation: cop-flash 1s steps(1) infinite;
+}
+@keyframes cop-flash { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.35; } }
+.hud-val.danger { color: #ff3a3a !important; animation: cop-flash 1s steps(1) infinite; }
+
+/* ── Bust strobe (when caught) ── */
+#bust-overlay {
+  position: fixed; inset: 0; z-index: 66; display: none;
+  align-items: center; justify-content: center;
+  font-family: 'Courier New', monospace; background: #000;
+}
+#bust-overlay.on { display: flex; animation: bust-strobe 0.5s steps(1) infinite; }
+@keyframes bust-strobe {
+  0%,49%   { background: rgba(180,0,0,0.55); }
+  50%,100% { background: rgba(0,30,180,0.55); }
+}
+#bust-overlay .bust-txt {
+  color: #fff; font-size: 40px; font-weight: bold; letter-spacing: 4px;
+  text-shadow: 0 0 24px rgba(0,0,0,0.9); text-align: center;
+}
 </style>
 </head>
 
@@ -541,6 +587,13 @@ canvas { display: block; width: 100dvw; height: 100dvh; }
 
 <!-- Pickup toast -->
 <div id="toast"></div>
+
+<!-- Police alarm: final-30s vignette + countdown -->
+<div id="alarm-vignette"></div>
+<div id="cop-timer"><div class="lbl">⚠ ПОЛИЦИЯ ЕДЕТ ⚠</div><div class="num" id="cop-num">0:30</div></div>
+
+<!-- Bust strobe (caught) -->
+<div id="bust-overlay"><div class="bust-txt" id="bust-txt">🚔 ПОЛИЦИЯ!</div></div>
 
 <!-- Mission report modal -->
 <div id="report-overlay">
@@ -1802,12 +1855,20 @@ function buildHouseInterior() {
     if (z1 > cur) seg(cur, z1);
   }
 
-  // ── Lighting (kept minimal; per-floor with limited range) ─
-  const gl1 = new THREE.PointLight(0xffe2b0, 9, 13, 1.6); gl1.position.set(O - 4, 2.6, 2);    missionRoot.add(gl1);
-  const gl2 = new THREE.PointLight(0xffd49a, 7, 12, 1.7); gl2.position.set(O + 4, 2.6, -3);   missionRoot.add(gl2);
-  const fl1 = new THREE.PointLight(0xcfd8ff, 8, 12, 1.7); fl1.position.set(O - 4, 5.4, 2);    missionRoot.add(fl1);
-  const fl2 = new THREE.PointLight(0xffd8a0, 7, 12, 1.7); fl2.position.set(O + 4, 5.4, -3);   missionRoot.add(fl2);
-  const al  = new THREE.PointLight(0xffc488, 5, 7, 2);    al.position.set(O - 5.5, 7.8, -4.5); missionRoot.add(al);
+  // ── Lighting: a cheap hemisphere fill so no room is pitch-black, plus warm pools ─
+  const interiorFill = new THREE.HemisphereLight(0x6b7088, 0x16121a, 0.9);
+  missionRoot.add(interiorFill);
+  // ground floor (living / kitchen / back hall)
+  const gl1 = new THREE.PointLight(0xffe2b0, 16, 15, 1.4); gl1.position.set(O - 4.5, 2.6, 2.5); missionRoot.add(gl1);
+  const gl2 = new THREE.PointLight(0xffd49a, 13, 14, 1.5); gl2.position.set(O + 5.0, 2.6, 3.0); missionRoot.add(gl2);
+  const gl3 = new THREE.PointLight(0xffdca6, 12, 13, 1.5); gl3.position.set(O + 0.0, 2.6, -3.0); missionRoot.add(gl3);
+  // floor 1 (one warm pool per room)
+  const fl1 = new THREE.PointLight(0xdfe4ff, 14, 14, 1.5); fl1.position.set(O - 5.0, 5.4, 2.5); missionRoot.add(fl1);
+  const fl2 = new THREE.PointLight(0xffe0b0, 13, 14, 1.5); fl2.position.set(O + 5.0, 5.4, 2.5); missionRoot.add(fl2);
+  const fl3 = new THREE.PointLight(0xcfe0ff, 13, 14, 1.5); fl3.position.set(O - 5.0, 5.4, -4.5); missionRoot.add(fl3);
+  const fl4 = new THREE.PointLight(0xffe0b0, 12, 13, 1.5); fl4.position.set(O + 5.0, 5.4, -4.5); missionRoot.add(fl4);
+  // attic
+  const al  = new THREE.PointLight(0xffc488, 9, 9, 1.7);   al.position.set(O - 5.5, 7.9, -4.5); missionRoot.add(al);
 
   // ── Slabs (floors / ceilings) ───────────────────────────
   Pl(18.4, 12.4, 0, 0.0, -1, floor0);                       // ground floor
@@ -1933,13 +1994,19 @@ function buildHouseInterior() {
   F(0.55, 0.75, 0.55, 5.0, Fs + 0.37, 4.6, tile, collF1);    // toilet block
 
   // ----- CHILD'S ROOM (back-left) — Тёма -----
+  // bunk bed (collider on the lower frame blocks the whole footprint)
   F(1.0, 0.4, 2.2, -8.2, Fs + 0.2, -5.5, woodM, collF1);     // bunk lower frame
   B(1.0, 0.16, 2.1, -8.2, Fs + 0.35, -5.5, fabricB);         // lower mattress
   B(0.95, 0.1, 0.45, -8.2, Fs + 0.46, -6.4, sheetM);         // pillow
-  B(1.0, 0.4, 2.2, -8.2, Fs + 1.5, -5.5, woodM);             // bunk upper frame
-  B(1.0, 0.16, 2.1, -8.2, Fs + 1.65, -5.5, fabricB);         // upper mattress
-  [[-8.65,-6.5],[-7.75,-6.5],[-8.65,-4.5],[-7.75,-4.5]].forEach(([px,pz])=>
-    B(0.08, 1.9, 0.08, px, Fs + 0.95, pz, woodD));           // bunk posts
+  B(1.04, 0.5, 2.24, -8.2, Fs + 1.55, -5.5, woodM);          // bunk upper frame (solid)
+  B(1.0, 0.16, 2.1, -8.2, Fs + 1.72, -5.5, fabricB);         // upper mattress
+  B(0.95, 0.1, 0.45, -8.2, Fs + 1.83, -6.4, sheetM);         // upper pillow
+  // side guard rail on the top bunk + corner posts
+  B(0.06, 0.22, 2.1, -7.72, Fs + 1.95, -5.5, woodD);         // guard rail (open side)
+  [[-8.66,-6.56],[-7.74,-6.56],[-8.66,-4.44],[-7.74,-4.44]].forEach(([px,pz])=>
+    B(0.1, 2.0, 0.1, px, Fs + 0.9, pz, woodD));              // four corner posts
+  [[Fs + 0.7],[Fs + 1.0],[Fs + 1.3]].forEach(([ry])=>          // ladder rungs (foot end)
+    B(0.5, 0.05, 0.05, -8.2, ry, -4.4, metalM));
   F(1.0, 0.75, 0.55, -2.5, Fs + 0.37, -2.4, woodM, collF1);  // small desk
   B(1.0, 0.04, 0.55, -2.5, Fs + 0.75, -2.4, woodM);
   F(0.55, 0.5, 0.45, -2.6, Fs + 0.25, -6.5, woodM, collF1);  // toy chest
@@ -1950,7 +2017,8 @@ function buildHouseInterior() {
   B(1.9, 0.05, 0.75, 6.0, Fs + 0.75, -5.6, woodD);
   F(0.7, 0.95, 0.5, 8.3, Fs + 0.47, -4.0, woodD, collF1);    // bookshelf (E wall)
   B(0.7, 1.7, 0.5, 8.3, Fs + 1.65, -4.0, woodD);             // bookshelf upper
-  F(0.6, 0.55, 0.6, 3.0, Fs + 0.27, -6.4, fabric, collF1);   // office chair
+  F(0.6, 0.55, 0.6, 5.5, Fs + 0.27, -4.6, fabric, collF1);   // office chair (in front of desk)
+  B(0.55, 0.5, 0.08, 5.5, Fs + 0.75, -4.32, fabric);         // chair back
 
   /* ═══════ ATTIC — collAttic (walk Y=6.3) ═══════ */
   wallX(collAttic, -2, -9, -3, Fa, AH, 0.18, wallB);         // attic front
@@ -1996,17 +2064,18 @@ function buildHouseInterior() {
     registerInteractive(g, 'attic_up', isMobile ? 'Открыть люк' : 'E — Открыть люк на чердак');
   }
 
-  /* ═══════ THE FLOOR SAFE (child's room, under a loose plank) ═══════ */
+  /* ═══════ THE FLOOR SAFE (child's room, under a loose plank by the bed) ═══════ */
   {
-    const safeG = new THREE.Group(); safeG.position.set(O - 6, Fs, -5.6);
+    // tucked against the bunk bed by the window wall — matches the diary hint
+    const safeG = new THREE.Group(); safeG.position.set(O - 7.3, Fs, -5.3);
     const recess = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.5, 0.6),
       new THREE.MeshStandardMaterial({ color: 0x070707, roughness: 1 }));
-    recess.position.y = -0.2; safeG.add(recess);
+    recess.position.y = -0.28; safeG.add(recess);                 // sunk below the floor
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.42, 0.52),
       new THREE.MeshStandardMaterial({ color: 0x303438, roughness: 0.45, metalness: 0.75 }));
-    body.position.y = -0.16; safeG.add(body);
-    // safe lid (door) + keypad detail
-    safeDoorMesh = new THREE.Group(); safeDoorMesh.position.y = 0.06;
+    body.position.y = -0.26; safeG.add(body);
+    // safe lid (door) + keypad detail — sits just below the floorboards
+    safeDoorMesh = new THREE.Group(); safeDoorMesh.position.y = -0.04;
     const lid = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.06, 0.5),
       new THREE.MeshStandardMaterial({ color: 0x3a3e42, roughness: 0.4, metalness: 0.8 }));
     safeDoorMesh.add(lid);
@@ -2023,7 +2092,7 @@ function buildHouseInterior() {
     }
     safeG.add(safeDoorMesh);
     // loot inside (revealed after cracking)
-    safeLootGroup = new THREE.Group(); safeLootGroup.position.y = -0.08; safeLootGroup.visible = false;
+    safeLootGroup = new THREE.Group(); safeLootGroup.position.y = -0.16; safeLootGroup.visible = false;
     for (let i = 0; i < 3; i++) {
       const cash = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.22),
         new THREE.MeshStandardMaterial({ color: 0x3a6b40, roughness: 0.8 }));
@@ -2036,20 +2105,25 @@ function buildHouseInterior() {
       gem.position.set(gx, 0.12, 0.14); safeLootGroup.add(gem);
     });
     safeG.add(safeLootGroup);
-    // loose plank on top (raised + tint) + golden glint seam
-    safePlank = new THREE.Group(); safePlank.position.set(0, 0.16, 0);
+    // loose plank — FLUSH with the surrounding floorboards, only a hairline gap shows
+    safePlank = new THREE.Group(); safePlank.position.set(0, 0.155, 0);
     const plank = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.05, 0.3),
-      new THREE.MeshStandardMaterial({ color: 0x4a3622, roughness: 0.8 }));
+      new THREE.MeshStandardMaterial({ color: 0x35280f, roughness: 0.85 }));  // matches neighbours
     safePlank.add(plank);
-    safePlank.rotation.z = 0.07;                              // tilted up — "немного видно"
-    const glint = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.02, 0.04),
-      new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0xffb000, emissiveIntensity: 0.9,
-        roughness: 0.3, metalness: 0.6 }));
-    glint.position.set(0, 0.03, 0.17); safePlank.add(glint);  // the glint
+    safePlank.rotation.z = 0.022;                              // barely lifted on one edge
+    // subtle dark seam where the plank doesn't quite sit flush
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.02, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x0a0806, roughness: 1 }));
+    seam.position.set(0, 0.028, 0.16); safePlank.add(seam);
+    // a tiny DULL metallic glint in the gap — only catches the eye up close / with the torch
+    const glint = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.012, 0.012),
+      new THREE.MeshStandardMaterial({ color: 0xb9933f, emissive: 0x6a4d12, emissiveIntensity: 0.22,
+        roughness: 0.4, metalness: 0.7 }));
+    glint.position.set(0.05, 0.034, 0.16); safePlank.add(glint);
     safeG.add(safePlank);
-    // neighbouring static planks (floorboard pattern)
+    // neighbouring static planks (floorboard pattern), flush at the same height
     [-0.35, 0.35, 0.7, -0.7].forEach(zz =>
-      B(0.92, 0.04, 0.28, -6, Fs + 0.155, -5.6 + zz, new THREE.MeshStandardMaterial(
+      B(0.92, 0.05, 0.28, -7.3, Fs + 0.155, -5.3 + zz, new THREE.MeshStandardMaterial(
         { color: 0x33260f, roughness: 0.85 })));
     missionRoot.add(safeG);
     registerInteractive(safeG, 'safe', isMobile ? 'Осмотреть пол' : 'E — Осмотреть половицу');
@@ -2071,141 +2145,141 @@ function buildHouseInterior() {
     box(g, 0.06, 0.92, 1.65, solid(0x0a0a0a, 0.3)); box(g, 0.02, 0.84, 1.5, scr(0x223355), 0.05);
     g.rotation.y = Math.PI / 2;
   });
-  addCollectible('collect_soundbar', 400, 'Украсть саундбар', -8.5, 0.78, 2.0, g => {
+  addCollectible('collect_soundbar', 400, 'Украсть саундбар', -8.5, 0.56, 2.0, g => {
     box(g, 0.1, 0.1, 1.3, solid(0x161616, 0.6)); g.rotation.y = Math.PI / 2;
   });
-  addCollectible('collect_console', 500, 'Украсть консоль', -8.5, 0.6, 2.7, g => {
+  addCollectible('collect_console', 500, 'Украсть консоль', -8.5, 0.55, 2.7, g => {
     box(g, 0.3, 0.07, 0.3, solid(0x111111, 0.4)); box(g, 0.05, 0.02, 0.25, scr(0x3070ff), 0, 0.045);
   });
-  addCollectible('collect_vr', 800, 'Украсть VR-шлем', -5, 0.52, 2.4, g => {
+  addCollectible('collect_vr', 800, 'Украсть VR-шлем', -5, 0.50, 2.4, g => {
     box(g, 0.34, 0.18, 0.2, solid(0xdddddd, 0.5)); box(g, 0.3, 0.1, 0.02, scr(0x111133), 0, 0, 0.1);
   });
-  addCollectible('collect_speaker', 250, 'Украсть умную колонку', -1.0, 0.86, 4.65, g => {
+  addCollectible('collect_speaker', 250, 'Украсть умную колонку', -1.0, 1.03, 4.65, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 16), solid(0x222428, 0.7)); b.castShadow = true; g.add(b);
   });
-  addCollectible('collect_laptop', 1000, 'Украсть ноутбук', -0.4, 0.84, 1.2, g => {
+  addCollectible('collect_laptop', 1000, 'Украсть ноутбук', -0.4, 0.85, 1.2, g => {
     box(g, 0.5, 0.03, 0.34, solid(0x777b80, 0.4, 0.5));
     const s = box(g, 0.48, 0.32, 0.02, scr(0x223344), 0, 0.17, -0.16); s.rotation.x = -0.4;
   });
-  addCollectible('collect_tablet', 400, 'Украсть планшет', 0.6, 0.82, 0.6, g => {
+  addCollectible('collect_tablet', 400, 'Украсть планшет', 0.6, 0.845, 0.6, g => {
     box(g, 0.32, 0.02, 0.24, solid(0x111111, 0.3)); box(g, 0.28, 0.005, 0.2, scr(0x2a4a6a), 0, 0.014);
   });
   addCollectible('collect_painting', 2000, 'Украсть картину', -5.0, 2.2, 4.86, g => {
     box(g, 1.2, 0.9, 0.05, solid(0x3a2a14, 0.6)); box(g, 1.0, 0.72, 0.02, solid(0x556644, 0.7), 0, 0, 0.03);
   });
-  addCollectible('collect_vase', 1100, 'Украсть антикварную вазу', -1.4, 1.05, 4.65, g => {
+  addCollectible('collect_vase', 1100, 'Украсть антикварную вазу', -1.4, 1.10, 4.65, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.13, 0.4, 14), solid(0x2a6a8a, 0.3, 0.4)); b.castShadow = true; g.add(b);
   });
-  addCollectible('collect_figurine', 900, 'Украсть золотую статуэтку', -0.6, 1.0, 4.65, g => {
+  addCollectible('collect_figurine', 900, 'Украсть золотую статуэтку', -0.6, 1.07, 4.65, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.34, 8), solid(0xffcc44, 0.2, 0.9)); b.castShadow = true; g.add(b);
     box(g, 0.16, 0.04, 0.16, solid(0xccaa33, 0.3, 0.8), 0, -0.17);
   });
-  addCollectible('collect_coffee', 250, 'Украсть кофемашину', 7.5, 1.13, 4.5, g => {
+  addCollectible('collect_coffee', 250, 'Украсть кофемашину', 7.5, 1.12, 4.55, g => {
     box(g, 0.26, 0.34, 0.28, solid(0x161616, 0.5)); box(g, 0.18, 0.04, 0.02, scr(0x00ff88), 0, 0.08, 0.15);
   });
-  addCollectible('collect_microwave', 200, 'Украсть микроволновку', 8.1, 1.16, 3.5, g => {
+  addCollectible('collect_microwave', 200, 'Украсть микроволновку', 5.3, 1.10, 4.55, g => {
     box(g, 0.5, 0.3, 0.36, solid(0xcccccc, 0.4, 0.3)); box(g, 0.32, 0.2, 0.01, scr(0x221100), -0.06, 0, 0.185);
   });
-  addCollectible('collect_mixer', 150, 'Украсть миксер', 6.8, 1.12, 4.5, g => {
+  addCollectible('collect_mixer', 150, 'Украсть миксер', 6.8, 1.12, 4.55, g => {
     box(g, 0.18, 0.3, 0.18, solid(0xcc3333, 0.4)); box(g, 0.2, 0.06, 0.2, solid(0xaa2222, 0.4), 0, -0.16);
   });
-  addCollectible('collect_silver', 700, 'Украсть столовое серебро', 5.0, 1.0, 1.2, g => {
+  addCollectible('collect_silver', 700, 'Украсть столовое серебро', 5.0, 0.96, 1.2, g => {
     box(g, 0.34, 0.06, 0.24, solid(0x4a2c12, 0.6)); box(g, 0.3, 0.03, 0.2, solid(0xcccccc, 0.2, 0.9), 0, 0.04);
   });
-  addCollectible('collect_wine', 300, 'Украсть вино', 8.2, 1.12, 1.0, g => {
+  addCollectible('collect_wine', 300, 'Украсть вино', 5.6, 1.10, 1.45, g => {
     [-0.12, 0, 0.12].forEach(zx => { const b = new THREE.Mesh(
       new THREE.CylinderGeometry(0.04, 0.04, 0.34, 10), solid(0x14260f, 0.3)); b.position.x = zx; b.castShadow = true; g.add(b); });
   });
-  addCollectible('collect_jar', 150, 'Украсть банку с мелочью', -8.4, 0.3, -4.6, g => {
+  addCollectible('collect_jar', 150, 'Украсть банку с мелочью', -8.4, 0.13, -4.6, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14),
       new THREE.MeshStandardMaterial({ color: 0xbbaa66, transparent: true, opacity: 0.5, roughness: 0.2 })); b.castShadow = true; g.add(b);
   });
 
-  // --- master bedroom (floor1) ---
-  addCollectible('collect_watch', 1200, 'Украсть часы', -7.0, 4.24, 4.55, g => {
+  // --- master bedroom (floor1) — jewelry on the dresser top (Y≈4.2) ---
+  addCollectible('collect_watch', 1200, 'Украсть часы', -7.5, 4.24, 4.55, g => {
     box(g, 0.1, 0.03, 0.1, solid(0xffcc44, 0.2, 0.9)); box(g, 0.04, 0.01, 0.18, solid(0x2a1a0a, 0.6), 0, 0.01);
   });
-  addCollectible('collect_necklace', 1200, 'Украсть колье', -7.3, 4.23, 4.55, g => {
+  addCollectible('collect_necklace', 1200, 'Украсть колье', -7.15, 4.23, 4.55, g => {
     const b = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 8, 18), solid(0xffd24a, 0.2, 0.9));
     b.rotation.x = -Math.PI / 2; b.castShadow = true; g.add(b);
   });
-  addCollectible('collect_ring', 1500, 'Украсть кольцо с бриллиантом', -3.1, 3.98, 3.3, g => {
+  addCollectible('collect_ring', 1500, 'Украсть кольцо с бриллиантом', -3.1, 3.83, 3.3, g => {
     const r = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 8, 16), solid(0xffe080, 0.2, 0.95));
     r.castShadow = true; g.add(r);
     box(g, 0.025, 0.025, 0.025, new THREE.MeshStandardMaterial({ color: 0xcfeaff, emissive: 0x88bbff, emissiveIntensity: 0.6, roughness: 0.05 }), 0, 0.03);
   });
-  addCollectible('collect_earrings', 800, 'Украсть серьги', -6.7, 4.23, 4.55, g => {
+  addCollectible('collect_earrings', 800, 'Украсть серьги', -6.45, 4.23, 4.55, g => {
     [-0.05, 0.05].forEach(ex => box(g, 0.02, 0.06, 0.02, solid(0xffd24a, 0.2, 0.9), ex));
   });
-  addCollectible('collect_jewelbox', 600, 'Украсть шкатулку', -7.0, 4.28, 4.1, g => {
+  addCollectible('collect_jewelbox', 600, 'Украсть шкатулку', -6.8, 4.28, 4.55, g => {
     box(g, 0.24, 0.12, 0.18, solid(0x5a2a12, 0.5)); box(g, 0.2, 0.03, 0.14, solid(0x884422, 0.4), 0, 0.07);
   });
-  addCollectible('collect_camera', 700, 'Украсть фотоаппарат', -8.5, 4.55, 1.0, g => {
+  addCollectible('collect_camera', 700, 'Украсть фотоаппарат', -7.9, 3.90, 3.3, g => {
     box(g, 0.26, 0.16, 0.14, solid(0x161616, 0.4));
     const l = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 14), solid(0x0a0a0a, 0.3, 0.4));
     l.rotation.x = Math.PI / 2; l.position.z = 0.1; g.add(l);
   });
-  addCollectible('collect_perfume', 200, 'Украсть духи', -6.6, 4.25, 4.65, g => {
+  addCollectible('collect_perfume', 200, 'Украсть духи', -6.1, 4.25, 4.55, g => {
     box(g, 0.07, 0.14, 0.07, new THREE.MeshStandardMaterial({ color: 0xff88bb, transparent: true, opacity: 0.6, roughness: 0.1 }));
     box(g, 0.04, 0.04, 0.04, solid(0xffcc44, 0.3, 0.7), 0, 0.09);
   });
 
   // --- office (floor1) ---
-  addCollectible('collect_pc', 2500, 'Украсть игровой ПК', 6.0, 3.95, -5.0, g => {
+  addCollectible('collect_pc', 2500, 'Украсть игровой ПК', 6.7, 3.65, -5.0, g => {
     box(g, 0.4, 0.7, 0.5, solid(0x111114, 0.4, 0.3));
     box(g, 0.02, 0.5, 0.4, scr(0xaa33ff), 0.21); box(g, 0.3, 0.04, 0.02, scr(0x33aaff), 0, 0.25, 0.255);
   });
-  addCollectible('collect_monitor', 600, 'Украсть монитор', 6.0, 4.15, -5.85, g => {
+  addCollectible('collect_monitor', 600, 'Украсть монитор', 6.0, 4.45, -5.85, g => {
     box(g, 0.86, 0.5, 0.04, solid(0x0a0a0a, 0.3)); box(g, 0.8, 0.44, 0.01, scr(0x224466), 0, 0, 0.03);
     box(g, 0.16, 0.18, 0.1, solid(0x161616, 0.5), 0, -0.32);
   });
-  addCollectible('collect_drone', 1200, 'Украсть дрон', 8.3, 4.6, -3.0, g => {
+  addCollectible('collect_drone', 1200, 'Украсть дрон', 7.3, 3.35, -4.0, g => {
     box(g, 0.24, 0.05, 0.24, solid(0x161616, 0.4));
     [[-0.16,-0.16],[0.16,-0.16],[-0.16,0.16],[0.16,0.16]].forEach(([px,pz])=>{ const b=new THREE.Mesh(
       new THREE.CylinderGeometry(0.08,0.08,0.01,12), solid(0x222222,0.5)); b.position.set(px,0.03,pz); g.add(b); });
   });
-  addCollectible('collect_headphones', 300, 'Украсть наушники', 5.0, 3.95, -5.5, g => {
+  addCollectible('collect_headphones', 300, 'Украсть наушники', 5.5, 4.12, -5.5, g => {
     const b = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 8, 18, Math.PI), solid(0x222428, 0.6));
     b.castShadow = true; g.add(b); [-0.1, 0.1].forEach(ex => box(g, 0.06, 0.08, 0.06, solid(0x161616, 0.6), ex, -0.04));
   });
-  addCollectible('collect_ereader', 200, 'Украсть электронную книгу', 6.8, 3.95, -5.4, g => {
+  addCollectible('collect_ereader', 200, 'Украсть электронную книгу', 6.8, 4.08, -5.4, g => {
     box(g, 0.2, 0.02, 0.28, solid(0x444444, 0.4)); box(g, 0.17, 0.005, 0.24, scr(0xbbbbaa), 0, 0.014);
   });
 
   // --- bathroom (floor1) ---
-  addCollectible('collect_hairdryer', 100, 'Украсть фен', 3.0, 4.0, 4.5, g => {
+  addCollectible('collect_hairdryer', 100, 'Украсть фен', 3.0, 4.22, 4.5, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 12), solid(0xdd55aa, 0.5));
     b.rotation.z = Math.PI / 2; b.castShadow = true; g.add(b);
     box(g, 0.04, 0.12, 0.04, solid(0xcc4499, 0.5), 0.06, -0.08);
   });
 
   // --- child's room (floor1) ---
-  addCollectible('collect_phone', 350, 'Украсть смартфон', -2.5, 3.96, -2.5, g => {
+  addCollectible('collect_phone', 350, 'Украсть смартфон', -2.5, 4.08, -2.5, g => {
     box(g, 0.14, 0.02, 0.28, solid(0x111111, 0.3)); box(g, 0.11, 0.005, 0.24, scr(0x3a6a9a), 0, 0.014);
   });
-  addCollectible('collect_handheld', 250, 'Украсть портативную консоль', -8.2, 3.93, -4.6, g => {
+  addCollectible('collect_handheld', 250, 'Украсть портативную консоль', -8.2, 3.77, -4.8, g => {
     box(g, 0.34, 0.03, 0.16, solid(0x2233aa, 0.4)); box(g, 0.16, 0.005, 0.12, scr(0x66ccff), 0, 0.018);
   });
-  addCollectible('collect_dino', 400, 'Украсть золотого динозавра', -3.0, 4.33, -6.5, g => {
+  addCollectible('collect_dino', 400, 'Украсть золотого динозавра', -2.6, 3.96, -6.5, g => {
     box(g, 0.1, 0.16, 0.26, solid(0xffcc44, 0.2, 0.9)); box(g, 0.08, 0.1, 0.06, solid(0xffcc44, 0.2, 0.9), 0, 0.13, 0.1);
     box(g, 0.06, 0.12, 0.06, solid(0xffcc44, 0.2, 0.9), 0, -0.1, -0.08);
   });
 
   // --- hidden stashes (count toward money) ---
-  addCollectible('collect_couchcash', 300, 'Забрать пачку под подушкой', -4.3, 0.62, 4.3, g => {
+  addCollectible('collect_couchcash', 300, 'Забрать пачку под подушкой', -4.3, 0.73, 4.3, g => {
     box(g, 0.2, 0.05, 0.12, solid(0x3a6b40, 0.8)); box(g, 0.19, 0.012, 0.11, solid(0x4a7a50, 0.8), 0, 0.03);
   });
-  addCollectible('collect_envelope', 400, 'Забрать конверт с деньгами', 5.5, 1.0, 4.5, g => {
+  addCollectible('collect_envelope', 400, 'Забрать конверт с деньгами', 4.5, 0.95, 1.2, g => {
     box(g, 0.24, 0.02, 0.16, solid(0xe8e0c8, 0.9)); g.rotation.y = 0.3;
   });
-  addCollectible('collect_bookmoney', 250, 'Забрать деньги из книги', 8.3, 4.42, -5.0, g => {
+  addCollectible('collect_bookmoney', 250, 'Забрать деньги из книги', 8.2, 4.38, -4.0, g => {
     box(g, 0.06, 0.22, 0.3, solid(0x3a2a5a, 0.7)); box(g, 0.1, 0.04, 0.24, solid(0x4a7a50, 0.8), 0.04, 0, 0);
   });
-  addCollectible('collect_piggy', 500, 'Разбить копилку', -3.0, 3.9, -2.0, g => {
+  addCollectible('collect_piggy', 500, 'Разбить копилку', -2.2, 4.17, -2.4, g => {
     const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 12), solid(0xff88bb, 0.5)); b.scale.set(1.3, 1, 1); b.castShadow = true; g.add(b);
     box(g, 0.04, 0.06, 0.04, solid(0xff88bb, 0.5), 0, 0.13);
   });
-  addCollectible('collect_atticstash', 600, 'Забрать заначку', -5.0, 6.45, -5.5, g => {
+  addCollectible('collect_atticstash', 600, 'Забрать заначку', -5.0, 6.38, -5.5, g => {
     box(g, 0.3, 0.12, 0.22, solid(0x3a2a14, 0.7)); box(g, 0.26, 0.05, 0.18, solid(0x3a6b40, 0.8), 0, 0.08);
   });
 
@@ -2288,6 +2362,10 @@ function mergeMissionStatics() {
 let missionActive = false;
 let missionTimeSec = 480, missionMoney = 0, missionStashFound = false;
 let missionTimerHandle = null;
+// Police chase (final 30s) state
+let missionCaught = false, alarmActive = false, bustActive = false;
+let sirenNodes = null;
+const POLICE_WARN_SEC = 30;
 
 // House interior state
 let doorUnlocked  = false;
@@ -2340,6 +2418,65 @@ const HINTS = {
     body: 'ДЕТСКИЙ САД №7\n\nВоспитанник: Артём (Тёма)\nГруппа: №7 «Динозаврики»\nДата рождения: 14.07' },
 };
 
+// ── Police siren (looping two-tone) ─────────────────────────
+function startSiren() {
+  if (sirenNodes) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sawtooth'; g.gain.value = 0.045;
+    o.frequency.value = 700;
+    o.connect(g); g.connect(ctx.destination); o.start();
+    let hi = false;
+    const lfo = setInterval(() => { hi = !hi; o.frequency.setValueAtTime(hi ? 920 : 620, ctx.currentTime); }, 480);
+    sirenNodes = { ctx, o, g, lfo };
+  } catch (e) {}
+}
+function stopSiren() {
+  if (!sirenNodes) return;
+  try { clearInterval(sirenNodes.lfo); sirenNodes.o.stop(); sirenNodes.ctx.close(); } catch (e) {}
+  sirenNodes = null;
+}
+function startPoliceAlarm() {
+  if (alarmActive) return;
+  alarmActive = true;
+  document.getElementById('alarm-vignette').classList.add('on');
+  document.getElementById('cop-timer').classList.add('on');
+  document.getElementById('hud-timer').classList.add('danger');
+  startSiren();
+  showToast('⚠ Сигнализация! Полиция выехала — уходи через дверь!');
+}
+function clearPoliceAlarm() {
+  alarmActive = false;
+  document.getElementById('alarm-vignette').classList.remove('on');
+  document.getElementById('cop-timer').classList.remove('on');
+  document.getElementById('hud-timer').classList.remove('danger');
+  stopSiren();
+}
+
+// Player got out in time → voluntary end (caught = false)
+async function policeBust() {
+  if (bustActive || !missionActive) return;
+  bustActive = true; missionCaught = true; missionActive = false;
+  stopMissionTimer();
+  document.getElementById('cop-timer').classList.remove('on');
+  document.getElementById('alarm-vignette').classList.remove('on');
+  document.getElementById('mission-hud').style.display = 'none';
+  document.getElementById('car-menu').style.display = 'none';
+  document.getElementById('keypad-overlay').classList.remove('active');
+  document.getElementById('note-overlay').classList.remove('active');
+  if (document.pointerLockElement) document.exitPointerLock();
+  setHandVisible(false);
+  document.getElementById('mobile-ui').style.display = 'none';
+  const bust = document.getElementById('bust-overlay');
+  document.getElementById('bust-txt').textContent = '🚔 ПОЛИЦИЯ! ВАС ЗАДЕРЖАЛИ';
+  bust.classList.add('on');
+  await new Promise(r => setTimeout(r, 2600));
+  bust.classList.remove('on');
+  stopSiren();
+  showMissionReport();
+}
+
 function startMissionTimer() {
   missionTimerHandle = setInterval(() => {
     if (!missionActive) return;
@@ -2347,7 +2484,13 @@ function startMissionTimer() {
     const m = String(Math.floor(missionTimeSec / 60)).padStart(2, '0');
     const s = String(missionTimeSec % 60).padStart(2, '0');
     document.getElementById('hud-timer').textContent = `${m}:${s}`;
-    if (missionTimeSec <= 0) endMission();
+
+    // final-30s police alarm: red vignette + countdown + siren
+    if (missionTimeSec <= POLICE_WARN_SEC && missionTimeSec > 0) {
+      if (!alarmActive) startPoliceAlarm();
+      document.getElementById('cop-num').textContent = '0:' + String(missionTimeSec).padStart(2, '0');
+    }
+    if (missionTimeSec <= 0) policeBust();   // time up → caught
   }, 1000);
 }
 function stopMissionTimer() { clearInterval(missionTimerHandle); missionTimerHandle = null; }
@@ -2378,6 +2521,8 @@ async function startMission() {
   missionActive = true;
   missionTimeSec = 480; missionMoney = 0; missionStashFound = false;
   safeCracked = false; plankPried = false; keypadEntry = '';
+  missionCaught = false; bustActive = false; clearPoliceAlarm();
+  document.getElementById('bust-overlay').classList.remove('on');
 
   await fadeIn(700);
 
@@ -2394,6 +2539,7 @@ async function endMission() {
   if (!missionActive) return;
   stopMissionTimer();
   missionActive = false;
+  clearPoliceAlarm();
   document.getElementById('car-menu').style.display = 'none';
   document.getElementById('mission-hud').style.display = 'none';
   if (document.pointerLockElement) document.exitPointerLock();
@@ -2402,22 +2548,30 @@ async function endMission() {
 }
 
 function showMissionReport() {
-  const goalMet = missionMoney >= 20000;
-  const safeLine = safeCracked
-    ? '<div class="rp-badge win">🏆 Легендарный кейс найден — сейф взломан!</div>'
-    : '<div class="rp-badge miss">📦 Легендарный кейс не найден. Сейф остался цел.</div>';
+  const goalMet = !missionCaught && missionMoney >= 20000;
+  let badge, payout = missionCaught ? 0 : missionMoney;
+  if (missionCaught) {
+    badge = '<div class="rp-badge caught">🚔 Не успел уйти — задержан полицией. Вся добыча конфискована.</div>';
+  } else if (safeCracked) {
+    badge = '<div class="rp-badge win">🏆 Легендарный кейс найден — сейф взломан!</div>';
+  } else {
+    badge = '<div class="rp-badge miss">📦 Легендарный кейс не найден. Сейф остался цел.</div>';
+  }
   document.getElementById('rp-lines').innerHTML =
-    `<div class="rp-line"><span>Награблено</span><span class="v">${missionMoney.toLocaleString()}$</span></div>` +
+    `<div class="rp-line"><span>${missionCaught ? 'Награблено (изъято)' : 'Награблено'}</span><span class="v">${missionMoney.toLocaleString()}$</span></div>` +
     `<div class="rp-line"><span>Заказ</span><span class="v">20 000$</span></div>` +
-    safeLine +
+    badge +
     `<div class="rp-div"></div>` +
-    `<div class="rp-line rp-total"><span>${goalMet ? 'Заказ выполнен ✓' : 'Заказ провален'}</span><span class="v">${missionMoney.toLocaleString()}$</span></div>`;
+    `<div class="rp-line rp-total"><span>${missionCaught ? 'Провал — задержание' : (goalMet ? 'Заказ выполнен ✓' : 'Заказ провален')}</span><span class="v">${payout.toLocaleString()}$</span></div>`;
   document.getElementById('report-overlay').classList.add('active');
   document.getElementById('mobile-ui').style.display = 'none';
 }
 
 async function finishReport() {
   document.getElementById('report-overlay').classList.remove('active');
+  clearPoliceAlarm();
+  document.getElementById('bust-overlay').classList.remove('on');
+  bustActive = false; missionCaught = false;
   await fadeOut(600);
 
   missionRoot.visible = false;
@@ -2434,7 +2588,7 @@ async function finishReport() {
   // reset safe to its initial covered state
   if (safeDoorMesh)  safeDoorMesh.visible = true;
   if (safeLootGroup) safeLootGroup.visible = false;
-  if (safePlank)   { safePlank.position.set(0, 0.16, 0); safePlank.rotation.z = 0.07; }
+  if (safePlank)   { safePlank.position.set(0, 0.155, 0); safePlank.rotation.z = 0.022; }
   safeCracked = false; plankPried = false; keypadEntry = '';
   propTweens.length = 0;
   interactiveRegistry.forEach(e => {
@@ -2786,27 +2940,24 @@ function processMovement(delta) {
     mx /= len; mz /= len;
     const spd = CFG.moveSpeed * delta;
     const R = 0.32; // player capsule radius
-    let nx = playerRig.position.x + mx * spd;
-    let nz = playerRig.position.z + mz * spd;
+    const ox = playerRig.position.x, oz = playerRig.position.z;
 
-    // AABB collision: try sliding along X and Z axes independently
-    for (const c of colliders) {
-      const overlapX = nx + R > c.minX && nx - R < c.maxX;
-      const overlapZ = nz + R > c.minZ && nz - R < c.maxZ;
-      if (overlapX && overlapZ) {
-        // Test X-only slide
-        const slideX = playerRig.position.x + mx * spd;
-        const canSlideX = !(slideX + R > c.minX && slideX - R < c.maxX &&
-                            nz     + R > c.minZ && nz     - R < c.maxZ);
-        // Test Z-only slide
-        const slideZ = playerRig.position.z + mz * spd;
-        const canSlideZ = !(nx     + R > c.minX && nx     - R < c.maxX &&
-                            slideZ + R > c.minZ && slideZ - R < c.maxZ);
-        if (canSlideX) { nz = playerRig.position.z; }
-        else if (canSlideZ) { nx = playerRig.position.x; }
-        else { nx = playerRig.position.x; nz = playerRig.position.z; }
+    // Does a circle at (px,pz) of radius R intersect ANY solid box?
+    const hits = (px, pz) => {
+      for (const c of colliders) {
+        if (px + R > c.minX && px - R < c.maxX &&
+            pz + R > c.minZ && pz - R < c.maxZ) return true;
       }
-    }
+      return false;
+    };
+
+    // Resolve each axis independently against every collider so the player
+    // slides smoothly ALONG walls instead of sticking when pushing into them.
+    let nx = ox, nz = oz;
+    const tryX = ox + mx * spd;
+    if (!hits(tryX, oz)) nx = tryX;          // move in X if the X-step is clear
+    const tryZ = oz + mz * spd;
+    if (!hits(nx, tryZ)) nz = tryZ;          // then move in Z (from the new X)
 
     playerRig.position.x = clamp(nx, roomBounds.minX, roomBounds.maxX);
     playerRig.position.z = clamp(nz, roomBounds.minZ, roomBounds.maxZ);

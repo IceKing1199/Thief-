@@ -1911,9 +1911,9 @@ function buildHouseInterior() {
   F(0.4, 0.5, 2.2, -8.6, 0.25, 2.0, woodD, collF0);          // tv stand (W wall)
   B(0.05, 1.6, 2.0, -8.92, 1.4, 2.0, wallB);                 // wall accent behind tv
 
-  // ----- Dining (center) -----
-  F(1.8, 0.1, 1.0, 0, 0.78, 1.0, woodM, collF0);             // dining table top
-  [[-0.8,0.6],[0.8,0.6],[-0.8,1.4],[0.8,1.4]].forEach(([dx,dz])=>B(0.1,0.78,0.1,dx,0.39,dz,woodD));
+  // ----- Dining (center-right of the open plan) -----
+  F(1.8, 0.1, 1.0, 0.8, 0.78, 2.6, woodM, collF0);           // dining table top
+  [[0.0,2.2],[1.6,2.2],[0.0,3.0],[1.6,3.0]].forEach(([dx,dz])=>B(0.1,0.78,0.1,dx,0.39,dz,woodD));
   B(1.4, 0.9, 0.5, -1, 0.45, 4.65, woodD);                   // sideboard (N wall)
   fc(collF0, -1, 4.65, 0.75, 0.3);
 
@@ -2129,6 +2129,176 @@ function buildHouseInterior() {
     registerInteractive(safeG, 'safe', isMobile ? 'Осмотреть пол' : 'E — Осмотреть половицу');
   }
 
+  /* ═══════ EXTRA FURNISHING & DECOR — fills the rooms, defines zones ═══════ */
+  {
+    const rugRed  = new THREE.MeshStandardMaterial({ color: 0x5a2832, roughness: 0.99 });
+    const rugBlue = new THREE.MeshStandardMaterial({ color: 0x24384e, roughness: 0.99 });
+    const rugBeige= new THREE.MeshStandardMaterial({ color: 0x6a5d44, roughness: 0.99 });
+    const rugGrey = new THREE.MeshStandardMaterial({ color: 0x36363c, roughness: 0.99 });
+    const rugKid  = new THREE.MeshStandardMaterial({ color: 0x2f5a6a, roughness: 0.99 });
+    const leaf    = new THREE.MeshStandardMaterial({ color: 0x305d36, roughness: 0.85 });
+    const potM    = new THREE.MeshStandardMaterial({ color: 0x6a4730, roughness: 0.8 });
+    const shadeM  = new THREE.MeshStandardMaterial({ color: 0xffe7b2, emissive: 0xffd089, emissiveIntensity: 0.7, roughness: 0.6 });
+    const darkM   = new THREE.MeshStandardMaterial({ color: 0x16140f, roughness: 0.6 });
+    const frameM  = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.7 });
+    const linenM  = new THREE.MeshStandardMaterial({ color: 0x8a8276, roughness: 0.9 });
+    const bookCols= [0x7a3b30, 0x36506a, 0x55683a, 0x6a5a2a, 0x434374, 0x844a2a, 0x55402f];
+    const M = (c, r = 0.7, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+    const mesh = (geo, mat, x, y, z) => { const e = new THREE.Mesh(geo, mat); e.position.set(O + x, y, z); e.castShadow = true; missionRoot.add(e); return e; };
+    const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
+
+    // framed picture flat on a wall
+    const pic = (x, y, z, w, h, rotY, art) => {
+      const g = new THREE.Group(); g.position.set(O + x, y, z); g.rotation.y = rotY;
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.04), frameM));
+      const a = new THREE.Mesh(new THREE.BoxGeometry(w * 0.84, h * 0.84, 0.02), M(art, 0.5)); a.position.z = 0.025; g.add(a);
+      missionRoot.add(g);
+    };
+    const pics = (arr) => arr.forEach(p => pic(...p));
+    // potted plant (no collider)
+    const plant = (x, z, fy, big = false) => {
+      const s = big ? 1.4 : 1.0;
+      mesh(new THREE.CylinderGeometry(0.15 * s, 0.19 * s, 0.32 * s, 12), potM, x, fy + 0.16 * s, z);
+      const f = mesh(new THREE.SphereGeometry(0.3 * s, 8, 7), leaf, x, fy + 0.32 * s + 0.27 * s, z); f.scale.set(1, 1.4, 1);
+      if (big) mesh(new THREE.SphereGeometry(0.2 * s, 8, 7), leaf, x + 0.13, fy + 0.5 * s, z - 0.05);
+    };
+    // floor lamp (glowing shade, no collider)
+    const lampF = (x, z, fy) => {
+      mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.45, 8), darkM, x, fy + 0.72, z);
+      mesh(new THREE.CylinderGeometry(0.18, 0.06, 0.04, 12), darkM, x, fy + 0.02, z);
+      mesh(new THREE.CylinderGeometry(0.17, 0.21, 0.27, 14), shadeM, x, fy + 1.5, z);
+    };
+    // table lamp
+    const lampT = (x, y, z) => {
+      mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.18, 10), darkM, x, y + 0.09, z);
+      mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.16, 12), shadeM, x, y + 0.26, z);
+    };
+    // ceiling pendant
+    const pendant = (x, z, ceilY) => {
+      mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 6), darkM, x, ceilY - 0.35, z);
+      mesh(new THREE.ConeGeometry(0.18, 0.22, 14, 1, true), shadeM, x, ceilY - 0.78, z);
+    };
+    // books on a surface (no collider)
+    const books = (x, y, z, n, rotY = 0) => {
+      const g = new THREE.Group(); g.position.set(O + x, y, z); g.rotation.y = rotY;
+      for (let i = 0; i < n; i++) { const h = 0.16 + (i % 3) * 0.04;
+        g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.045, h, 0.15), M(bookCols[(i * 2) % bookCols.length], 0.7)), -n * 0.025 + i * 0.05, h / 2, 0)); }
+      missionRoot.add(g);
+    };
+    // dining/kid chair (NO collider — avoids trapping the player)
+    const chair = (x, z, fy, rotY = 0, col = woodM) => {
+      const g = new THREE.Group(); g.position.set(O + x, fy, z); g.rotation.y = rotY;
+      g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.42), col), 0, 0.45, 0));
+      g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.5, 0.06), col), 0, 0.7, -0.18));
+      [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]].forEach(([lx, lz]) =>
+        g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 0.05), woodD), lx, 0.22, lz)));
+      missionRoot.add(g);
+    };
+    // bar stool (no collider)
+    const stool = (x, z, fy) => {
+      mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.06, 14), woodM, x, fy + 0.66, z);
+      mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.66, 8), metalM, x, fy + 0.33, z);
+    };
+    // armchair WITH collider (placed against walls / corners)
+    const armchair = (x, z, fy, set, rotY = 0) => {
+      const g = new THREE.Group(); g.position.set(O + x, fy, z); g.rotation.y = rotY;
+      g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.42, 0.78), fabric), 0, 0.24, 0));
+      g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.55, 0.16), fabric), 0, 0.52, -0.31));
+      [-0.35, 0.35].forEach(ax => g.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.34, 0.78), fabric), ax, 0.45, 0)));
+      missionRoot.add(g); fc(set, x, z, 0.43, 0.43);
+    };
+    // tall cabinet / wardrobe / bookshelf (collider). w = X-size, dp = Z-size.
+    const cabinet = (x, z, fy, w, dp, h, set, mat = woodD, shelves = true) => {
+      B(w, h, dp, x, fy + h / 2, z, mat);
+      if (shelves) for (let s = 1; s < 4; s++) B(w * 0.92, 0.04, dp * 0.86, x, fy + h * s / 4, z, woodM);
+      fc(set, x, z, w / 2 + 0.02, dp / 2 + 0.02);
+    };
+    const rug = (x, z, fy, w, d, mat) => Pl(w, d, x, fy + 0.015, z, mat);
+
+    /* ─── GROUND FLOOR ─── */
+    // entry (player spawns ~(0,4.2) facing -Z)
+    rug(0, 4.3, 0, 1.2, 1.0, rugBeige);
+    B(0.9, 0.8, 0.32, 1.9, 0.4, 4.66, woodM); fc(collF0, 1.9, 4.66, 0.47, 0.2);   // console (front wall)
+    B(0.5, 0.6, 0.03, 1.9, 1.55, 4.84, metalM);                                   // mirror
+    lampT(1.9, 0.8, 4.6);
+    [1.4, 1.9, 2.4].forEach(hx => B(0.04, 0.18, 0.04, hx, 1.55, 4.86, darkM));     // coat hooks
+    plant(-0.2, 4.5, 0);
+
+    // living room — lounge facing the wall-mounted TV
+    rug(-5.0, 2.6, 0, 4.6, 3.8, rugRed);
+    B(0.9, 0.7, 1.8, -3.0, 0.35, 2.2, fabric); B(0.16, 0.45, 1.8, -2.56, 0.6, 2.2, fabric);  // loveseat (faces -X / TV)
+    fc(collF0, -3.0, 2.2, 0.51, 0.94);
+    armchair(-7.7, 4.3, 0, collF0, -0.6);
+    cabinet(-8.55, -0.2, 0, 0.8, 0.3, 1.7, collF0, woodD); books(-8.5, 1.2, -0.2, 6, Math.PI / 2);
+    lampF(-8.4, 4.4, 0); plant(-8.4, -0.5, 0, true);
+    B(0.5, 0.5, 0.5, -2.9, 0.25, 4.0, woodM); fc(collF0, -2.9, 4.0, 0.29, 0.29); lampT(-2.9, 0.5, 4.0);
+    pics([[-8.86, 1.9, 3.6, 0.7, 0.9, Math.PI / 2, 0x3a4a5a], [-8.86, 1.7, 0.5, 0.6, 0.8, Math.PI / 2, 0x4a3a2a], [-5.0, 2.0, 4.86, 1.0, 0.7, Math.PI, 0x2a3a4a]]);
+    pendant(-5.0, 2.4, 3.0);
+
+    // dining — chairs, rug, pendant around the relocated table (0.8,2.6)
+    rug(0.8, 2.6, 0, 2.6, 2.2, rugGrey);
+    [[0.3, 2.0, 0], [1.3, 2.0, 0], [0.3, 3.2, Math.PI], [1.3, 3.2, Math.PI]].forEach(c => chair(c[0], c[1], 0, c[2]));
+    pendant(0.8, 2.6, 3.0);
+    plant(1.0, 4.5, 0); lampT(-1.0, 0.9, 4.65);
+
+    // kitchen — island stools (south side, as a breakfast bar), pantry, plant, art
+    [[4.3, 0.5], [4.9, 0.5], [5.5, 0.5]].forEach(s => stool(s[0], s[1], 0));
+    cabinet(8.55, 3.4, 0, 0.5, 0.7, 2.3, collF0, woodD, false);                    // tall pantry (E wall)
+    plant(3.3, 4.4, 0);
+    pics([[8.86, 1.6, 3.0, 0.5, 0.6, -Math.PI / 2, 0x4a4a2a], [6.5, 1.5, 4.86, 0.6, 0.5, Math.PI, 0x3a4a3a]]);
+    pendant(5.0, 1.2, 3.0);
+
+    // back hall — runner, console nook, gallery, plants, WC fittings
+    rug(0.0, -2.3, 0, 1.8, 2.8, rugBlue);
+    B(1.2, 0.8, 0.3, -3.2, 0.4, -6.78, woodM); fc(collF0, -3.2, -6.78, 0.62, 0.2); // console (S wall nook)
+    lampT(-3.5, 0.8, -6.7); books(-3.0, 0.85, -6.7, 5);
+    pics([[-8.86, 1.6, -2.2, 0.5, 0.6, Math.PI / 2, 0x3a4a4a], [-3.2, 1.7, -6.86, 0.5, 0.6, 0, 0x3a3a4a], [-2.6, 1.7, -6.86, 0.4, 0.5, 0, 0x4a3a3a]]);
+    plant(-8.5, -6.4, 0, true);
+    F(0.5, 0.7, 0.55, 8.4, 0.35, -6.4, tile, collF0); B(0.45, 0.12, 0.4, 8.4, 0.78, -6.4, sheetM);  // WC toilet
+    B(0.5, 0.5, 0.4, 5.0, 0.45, -6.6, woodM); fc(collF0, 5.0, -6.6, 0.29, 0.24);   // WC sink
+    B(0.4, 0.5, 0.03, 5.0, 1.4, -6.78, metalM);                                    // WC mirror
+
+    /* ─── FLOOR 1 ─── */
+    // master bedroom
+    rug(-5.5, 2.2, Fs, 3.2, 3.0, rugRed);
+    cabinet(-8.55, 0.0, Fs, 0.6, 1.0, 2.2, collF1, woodD, false);                  // wardrobe (W wall)
+    B(1.8, 0.4, 0.5, -5.5, Fs + 0.2, 0.4, woodD); fc(collF1, -5.5, 0.4, 0.92, 0.27);  // bench (foot of bed)
+    plant(-8.4, 4.4, Fs, true); lampF(-2.2, 4.3, Fs);
+    pics([[-5.5, Fs + 1.5, 4.86, 1.2, 0.8, Math.PI, 0x3a3a5a], [-8.86, Fs + 1.4, 2.0, 0.7, 0.9, Math.PI / 2, 0x4a3a4a]]);
+    pendant(-5.5, 2.0, 6.0);
+
+    // bathroom — shower stall, linen cabinet, towel, rug, plant
+    rug(4.0, 2.0, Fs, 2.0, 2.4, rugBeige);
+    cabinet(1.9, 4.4, Fs, 0.5, 0.5, 1.8, collF1, linenM, true);                    // linen cabinet
+    B(1.0, 2.0, 1.0, 7.8, Fs + 1.0, 1.6, M(0x6a7a82, 0.3, 0.2)); fc(collF1, 7.8, 1.6, 0.52, 0.52);  // shower stall
+    B(0.9, 0.05, 0.9, 7.8, Fs + 0.02, 1.6, tile);
+    B(0.06, 0.5, 0.5, 3.0, Fs + 1.2, 4.0, metalM);                                 // towel rail
+    plant(2.0, 1.0, Fs);
+    pic(8.86, Fs + 1.4, 3.0, 0.4, 0.5, -Math.PI / 2, 0x3a4a4a);
+    pendant(4.0, 2.0, 6.0);
+
+    // child's room
+    rug(-5.5, -3.8, Fs, 3.4, 3.2, rugKid);
+    cabinet(-1.9, -6.6, Fs, 0.7, 0.4, 1.4, collF1, M(0x6a4a8a, 0.7), true);        // toy shelf (S wall)
+    chair(-3.4, -3.0, Fs, 0.4, M(0xcc6644, 0.7)); chair(-3.4, -3.8, Fs, -0.4, M(0x44aacc, 0.7));
+    B(0.7, 0.4, 0.7, -4.0, Fs + 0.2, -3.4, M(0xe0b050, 0.7)); fc(collF1, -4.0, -3.4, 0.37, 0.37);  // kid table
+    const bean = mesh(new THREE.SphereGeometry(0.34, 10, 8), M(0x4488bb, 0.9), -6.6, Fs + 0.3, -2.4); bean.scale.set(1, 0.7, 1);
+    [[-7.5, -2.4, 0xcc5555], [-7.1, -2.4, 0x55aa55], [-7.5, -2.8, 0x5566cc]].forEach(b => B(0.22, 0.26, 0.22, b[0], Fs + 0.13, b[1], M(b[2], 0.7)));
+    plant(-8.4, -2.4, Fs);
+    pics([[-8.86, Fs + 1.3, -4.5, 0.5, 0.6, Math.PI / 2, 0xddaa55], [-8.86, Fs + 1.3, -3.0, 0.5, 0.6, Math.PI / 2, 0x55aadd]]);
+    pendant(-5.5, -3.8, 6.0);
+
+    // office
+    rug(6.0, -4.0, Fs, 3.0, 3.0, rugGrey);
+    cabinet(2.0, -5.6, Fs, 0.6, 0.5, 2.0, collF1, woodD, true);                    // bookshelf (hall wall)
+    cabinet(8.5, -6.4, Fs, 0.7, 0.5, 1.2, collF1, metalM, false);                  // filing cabinet (corner)
+    B(1.6, 0.6, 0.7, 4.2, Fs + 0.3, -2.2, fabricB); B(1.6, 0.4, 0.16, 4.2, Fs + 0.7, -1.9, fabricB); fc(collF1, 4.2, -2.2, 0.84, 0.39);  // couch
+    chair(7.4, -4.6, Fs, Math.PI, M(0x333a44, 0.6));                               // guest chair
+    plant(8.4, -2.4, Fs, true); lampF(8.4, -5.6, Fs);
+    pics([[8.86, Fs + 1.4, -3.0, 0.6, 0.8, -Math.PI / 2, 0x3a4a5a], [6.0, Fs + 1.4, -6.86, 0.8, 0.6, 0, 0x4a4a3a]]);
+    pendant(6.0, -4.5, 6.0);
+  }
+
   /* ═══════ COLLECTIBLES ═══════ */
   function addCollectible(tag, value, label, x, y, z, buildFn) {
     const g = new THREE.Group(); g.position.set(O + x, y, z);
@@ -2157,11 +2327,11 @@ function buildHouseInterior() {
   addCollectible('collect_speaker', 250, 'Украсть умную колонку', -1.0, 1.03, 4.65, g => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 16), solid(0x222428, 0.7)); b.castShadow = true; g.add(b);
   });
-  addCollectible('collect_laptop', 1000, 'Украсть ноутбук', -0.4, 0.85, 1.2, g => {
+  addCollectible('collect_laptop', 1000, 'Украсть ноутбук', 0.4, 0.85, 2.4, g => {
     box(g, 0.5, 0.03, 0.34, solid(0x777b80, 0.4, 0.5));
     const s = box(g, 0.48, 0.32, 0.02, scr(0x223344), 0, 0.17, -0.16); s.rotation.x = -0.4;
   });
-  addCollectible('collect_tablet', 400, 'Украсть планшет', 0.6, 0.845, 0.6, g => {
+  addCollectible('collect_tablet', 400, 'Украсть планшет', 1.2, 0.845, 2.75, g => {
     box(g, 0.32, 0.02, 0.24, solid(0x111111, 0.3)); box(g, 0.28, 0.005, 0.2, scr(0x2a4a6a), 0, 0.014);
   });
   addCollectible('collect_painting', 2000, 'Украсть картину', -5.0, 2.2, 4.86, g => {
